@@ -1,40 +1,46 @@
+
 // Find all our documentation at https://docs.near.org
 use hex::decode;
-use near_sdk::{env, ext_contract, near, require, Gas, NearToken, Promise};
-
-use bitcoin::secp256k1;
-use bitcoin::sign_message::{signed_msg_hash, MessageSignature};
-use bitcoin::{Address, CompressedPublicKey, Network};
-use bitcoin_hashes::sha256d::Hash;
+use near_sdk::{env, ext_contract, near, require, base64::prelude::*, Gas, NearToken, Promise};
 
 const PUBLIC_RLP_ENCODED_METHOD_NAMES: [&'static str; 1] = ["6a627842000000000000000000000000"];
 const MPC_CONTRACT_ACCOUNT_ID: &str = "v2.multichain-mpc.testnet";
 const COST: NearToken = NearToken::from_near(1);
 
-const ADDRESS: &str = "bc1q358gyrc8rf7nknq7nfwxl23mut5sesmx7djz50";
-const MSG: &str = "transactions:[{receiver_id:'testnet',actions:[{type:'FunctionCall',method_name:'create_account',args:obj2hex({new_account_id:'meowmeow-85739302.testnet',new_public_key:publicKey,}),amount:parseNearAmount('0.02'),gas:'100000000000000',},]}]";
+const PUBLIC_KEY: &str = "e506b36ec8ae9f3f4ff55eb2a41d1bb5db3fb447a1332943a27e51a3fb07108b";
+const ADDRESS: &str = "bc1psgwpsrezcst8wrem7v0xxtrc4mr35jv05qkdujkhv5ksch8pr7hs7mn7sx";
+const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"Bitcoin Signed Message:\n";
+const MSG: &str = "test";
 const SIG: &str =
-    "HyHq2/iCgg1LjGyUgKCjuWAI7pkPd7G/rSpVNUoNyEBSFY09LsH6b/oGiYmF1QUYIgoRT2HEosz4N3YqS07QXhs=";
+    "IKGHFEiQSVWXP8B8Cc6oEAZO6xeHzp8Q1q6fB9HnxbCOOYz9qmZbHTCBGhC33ZMPPhMaaAhow9WeU+qC9WbQAOk=";
 
-fn main() {
-    let signature: MessageSignature = MessageSignature::from_base64(SIG).unwrap();
-    println!("signature: {:?}", signature);
+// ecrecover stuff
 
-    let msg_hash: Hash = signed_msg_hash(MSG);
-    println!("msg_hash: {:?}", msg_hash);
-    let secp_ctx = secp256k1::Secp256k1::new();
 
-    let pubkey: CompressedPublicKey = signature
-        .recover_pubkey(&secp_ctx, msg_hash)
-        .unwrap()
-        .try_into()
-        .unwrap();
 
-    let p2wpkh = Address::p2wpkh(&pubkey, Network::Bitcoin);
-    println!("p2wpkh: {:?}", p2wpkh);
 
-    println!("match: {}", ADDRESS == format!("{}", p2wpkh));
+#[test] 
+pub fn main() {
+    let mut msg: Vec<u8> = vec!();
+    msg.push(BITCOIN_SIGNED_MSG_PREFIX.len() as u8);
+    msg.append(&mut BITCOIN_SIGNED_MSG_PREFIX.to_vec());
+    msg.push(MSG.len() as u8);
+    msg.append(&mut MSG.as_bytes().to_vec());
+    
+    let hash = env::sha256(&msg);
+    let msg_hash = env::sha256(&hash);
+        let sig_bytes = BASE64_STANDARD.decode(&mut SIG.as_bytes()).unwrap().as_slice()[1..].to_vec();
+    // println!("sig_bytes {:?}", sig_bytes);
+    let pk_bytes = decode(PUBLIC_KEY).unwrap();
+    println!("pk_bytes {:?}", pk_bytes);
+
+    let mut recovered = env::ecrecover(&msg_hash, &sig_bytes, 1, true).unwrap().to_vec();
+    recovered.truncate(32);
+    println!("recovered {:?}", recovered);
+
 }
+
+
 
 // interface for cross contract call to mpc contract
 #[ext_contract(mpc)]
@@ -57,7 +63,6 @@ impl Contract {
     // proxy to call MPC_CONTRACT_ACCOUNT_ID method sign if COST is deposited
     #[payable]
     pub fn sign(&mut self, rlp_payload: String, path: String, key_version: u32) -> Promise {
-        main();
 
         let owner = env::predecessor_account_id() == env::current_account_id();
 
