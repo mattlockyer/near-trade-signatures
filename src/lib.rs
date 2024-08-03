@@ -7,40 +7,7 @@ const PUBLIC_RLP_ENCODED_METHOD_NAMES: [&'static str; 1] = ["6a62784200000000000
 const MPC_CONTRACT_ACCOUNT_ID: &str = "v2.multichain-mpc.testnet";
 const COST: NearToken = NearToken::from_near(1);
 
-const PUBLIC_KEY: &str = "e506b36ec8ae9f3f4ff55eb2a41d1bb5db3fb447a1332943a27e51a3fb07108b";
-const ADDRESS: &str = "bc1psgwpsrezcst8wrem7v0xxtrc4mr35jv05qkdujkhv5ksch8pr7hs7mn7sx";
-const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"Bitcoin Signed Message:\n";
-const MSG: &str = "test";
-const SIG: &str =
-    "IKGHFEiQSVWXP8B8Cc6oEAZO6xeHzp8Q1q6fB9HnxbCOOYz9qmZbHTCBGhC33ZMPPhMaaAhow9WeU+qC9WbQAOk=";
-
-// ecrecover stuff
-
-
-
-
-#[test] 
-pub fn main() {
-    let mut msg: Vec<u8> = vec!();
-    msg.push(BITCOIN_SIGNED_MSG_PREFIX.len() as u8);
-    msg.append(&mut BITCOIN_SIGNED_MSG_PREFIX.to_vec());
-    msg.push(MSG.len() as u8);
-    msg.append(&mut MSG.as_bytes().to_vec());
-    
-    let hash = env::sha256(&msg);
-    let msg_hash = env::sha256(&hash);
-        let sig_bytes = BASE64_STANDARD.decode(&mut SIG.as_bytes()).unwrap().as_slice()[1..].to_vec();
-    // println!("sig_bytes {:?}", sig_bytes);
-    let pk_bytes = decode(PUBLIC_KEY).unwrap();
-    println!("pk_bytes {:?}", pk_bytes);
-
-    let mut recovered = env::ecrecover(&msg_hash, &sig_bytes, 1, true).unwrap().to_vec();
-    recovered.truncate(32);
-    println!("recovered {:?}", recovered);
-
-}
-
-
+mod owner;
 
 // interface for cross contract call to mpc contract
 #[ext_contract(mpc)]
