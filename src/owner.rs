@@ -13,12 +13,19 @@ fn owner() {
     let mut msg: Vec<u8> = vec!();
     msg.push(BITCOIN_SIGNED_MSG_PREFIX.len() as u8);
     msg.append(&mut BITCOIN_SIGNED_MSG_PREFIX.to_vec());
-
-	// TODO handle variable encoding size: https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer
-	let msg_size_bytes = (MSG.len() as u16).to_le_bytes();
-    println!("msg_size_bytes {:?}", msg_size_bytes.to_vec());
-	msg.push(253);
-    msg.append(&mut msg_size_bytes.to_vec());
+	let msg_len = MSG.len();
+	if msg_len < 253 {
+		msg.push(msg_len as u8);
+	} else if msg_len < u16::max_value() as usize {
+		msg.push(253);
+		msg.append(&mut (MSG.len() as u16).to_le_bytes().to_vec());
+	} else if msg_len < u32::max_value() as usize {
+		msg.push(254);
+		msg.append(&mut (MSG.len() as u32).to_le_bytes().to_vec());
+	} else if msg_len < u64::max_value() as usize {
+		msg.push(255);
+		msg.append(&mut (MSG.len() as u64).to_le_bytes().to_vec());
+	}
     msg.append(&mut MSG.as_bytes().to_vec());
     
     let hash = env::sha256(&msg);
