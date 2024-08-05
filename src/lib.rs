@@ -1,5 +1,3 @@
-
-// Find all our documentation at https://docs.near.org
 use hex::decode;
 use near_sdk::{env, ext_contract, near, require, base64::prelude::*, Gas, NearToken, Promise};
 
@@ -27,7 +25,18 @@ pub struct Contract {}
 
 #[near]
 impl Contract {
-    // proxy to call MPC_CONTRACT_ACCOUNT_ID method sign if COST is deposited
+
+    // transfer Near if bitcoin signature is valid
+    pub fn test(&mut self, pk: String, msg: String, sig: String) -> Promise {
+        owner::require_btc_owner(&pk, &msg, &sig);
+
+        let batch = Promise::new(env::current_account_id())
+            .transfer(NearToken::from_yoctonear(1));
+
+        batch
+    }
+
+    // DEPRECATED REFERENCE ONLY: proxy to call MPC_CONTRACT_ACCOUNT_ID method sign if COST is deposited
     #[payable]
     pub fn sign(&mut self, rlp_payload: String, path: String, key_version: u32) -> Promise {
 

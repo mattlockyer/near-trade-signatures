@@ -11,7 +11,6 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 near-sdk = "5.1.0"
 hex = "0.4.3"
-varuint = "0.7.1"
 
 [dev-dependencies]
 near-sdk = { version = "5.1.0", features = ["unit-testing", "unstable"] }

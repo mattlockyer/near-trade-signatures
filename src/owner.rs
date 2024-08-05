@@ -1,53 +1,52 @@
-
-
 use crate::*;
 
-const PUBLIC_KEY: &str = "e506b36ec8ae9f3f4ff55eb2a41d1bb5db3fb447a1332943a27e51a3fb07108b";
 const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"Bitcoin Signed Message:\n";
-const MSG: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec volutpat orci. Duis viverra tortor sed mi venenatis sagittis. Quisque ultricies ex sed odio malesuada, a viverra tortor volutpat. Suspendisse et risus et tellus fermentum sollicitudin duis.";
-const SIG: &str =
-    "HzKPDWLnjzitKPbmYKMRCdNZQwjuVJJTIsMzJrhy5fleQHbtfTKQGH/tMaoe1nXwEfMXiJV6WnpafFsUX0ftZ4k=";
 
-// ecrecover stuff
-fn owner() {
-    let mut msg: Vec<u8> = vec!();
-    msg.push(BITCOIN_SIGNED_MSG_PREFIX.len() as u8);
-    msg.append(&mut BITCOIN_SIGNED_MSG_PREFIX.to_vec());
-	let msg_len = MSG.len();
-	if msg_len < 253 {
-		msg.push(msg_len as u8);
-	} else if msg_len < u16::max_value() as usize {
-		msg.push(253);
-		msg.append(&mut (MSG.len() as u16).to_le_bytes().to_vec());
-	} else if msg_len < u32::max_value() as usize {
-		msg.push(254);
-		msg.append(&mut (MSG.len() as u32).to_le_bytes().to_vec());
-	} else if msg_len < u64::max_value() as usize {
-		msg.push(255);
-		msg.append(&mut (MSG.len() as u64).to_le_bytes().to_vec());
-	}
-    msg.append(&mut MSG.as_bytes().to_vec());
-    
-    let hash = env::sha256(&msg);
-    let msg_hash = env::sha256(&hash);
-
-	let sig_bytes = BASE64_STANDARD.decode(&mut SIG.as_bytes()).unwrap();
-	let sig = sig_bytes.as_slice()[1..].to_vec();
-	let mal_flag = sig_bytes.as_slice()[0] - 31;
-    println!("mal_flag {:?}", mal_flag);
-
-    let pk_bytes = decode(PUBLIC_KEY).unwrap();
-    println!("pk_bytes {:?}", pk_bytes);
-
-    let mut recovered = env::ecrecover(&msg_hash, &sig, 0, true).unwrap().to_vec();
-    recovered.truncate(32);
-    println!("recovered {:?}", recovered);
-
+pub fn require_btc_owner(pk: &str, msg: &str, sig: &str) {
+	let recovered_pk = recover_pk(msg, sig);
+    // println!("recovered_pk {:?}", recovered_pk); // recovered_pk [229, 6, 179, 110, ...
+	let pk_bytes = decode(pk).unwrap();
+	require!(pk_bytes == recovered_pk, "public key != recovered public key from msg hash and signature");
 }
+// ecrecover stuff
+fn recover_pk(msg: &str, sig: &str) -> Vec<u8> {
 
-// debugging: cargo test -- --nocapture
+	// compose the message to be signed and hash it
+    let mut msg_bytes: Vec<u8> = vec!();
+    msg_bytes.push(BITCOIN_SIGNED_MSG_PREFIX.len() as u8);
+    msg_bytes.append(&mut BITCOIN_SIGNED_MSG_PREFIX.to_vec());
+	let msg_len = msg.len();
+	if msg_len < 253 {
+		msg_bytes.push(msg_len as u8);
+	} else if msg_len < u16::max_value() as usize {
+		msg_bytes.push(253);
+		msg_bytes.append(&mut (msg_len as u16).to_le_bytes().to_vec());
+	} else if msg_len < u32::max_value() as usize {
+		msg_bytes.push(254);
+		msg_bytes.append(&mut (msg_len as u32).to_le_bytes().to_vec());
+	} else if msg_len < u64::max_value() as usize {
+		msg_bytes.push(255);
+		msg_bytes.append(&mut (msg_len as u64).to_le_bytes().to_vec());
+	}
+    msg_bytes.append(&mut msg.as_bytes().to_vec());
+    let hash = env::sha256(&msg_bytes);
+    let msg_hash = env::sha256(&hash);
+	
+	// get signature bytes and parity
+	let sig_bytes = BASE64_STANDARD.decode(&mut sig.as_bytes()).unwrap();
+	let sig = sig_bytes.as_slice()[1..].to_vec();
+	let v = sig_bytes.as_slice()[0] - 31;
+
+	// recover the public key using ecdsa ecrecover
+    let mut recovered_pk = env::ecrecover(&msg_hash, &sig, v, true).unwrap().to_vec();
+    recovered_pk.truncate(32);
+    recovered_pk
+}
 
 #[test]
 fn test_owner() {
-	owner();
+	let pk: &str = "e506b36ec8ae9f3f4ff55eb2a41d1bb5db3fb447a1332943a27e51a3fb07108b";
+	let msg: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec volutpat orci. Duis viverra tortor sed mi venenatis sagittis. Quisque ultricies ex sed odio malesuada, a viverra tortor volutpat. Suspendisse et risus et tellus fermentum sollicitudin duis.";
+	let sig: &str = "HzKPDWLnjzitKPbmYKMRCdNZQwjuVJJTIsMzJrhy5fleQHbtfTKQGH/tMaoe1nXwEfMXiJV6WnpafFsUX0ftZ4k=";
+	require_btc_owner(pk, msg, sig);
 }
