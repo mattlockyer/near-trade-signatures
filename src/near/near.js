@@ -22,6 +22,16 @@ const config = {
 };
 const near = new Near(config);
 
+export const view = async ({ pk, msg, sig }) => {
+    const account = new Account(near.connection, accountId);
+    const res = await account.viewFunction({
+        contractId,
+        methodName: 'test_view',
+        args: { pk, msg, sig },
+    });
+    console.log(res);
+};
+
 export const broadcast = async ({ pk, msg, sig }) => {
     const account = new Account(near.connection, accountId);
     const res = await account.functionCall({
