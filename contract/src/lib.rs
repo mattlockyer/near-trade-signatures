@@ -1,5 +1,7 @@
 use hex::decode;
-use near_sdk::{env, ext_contract, near, require, serde_json::Value, Gas, NearToken, Promise};
+use near_sdk::{
+    env, ext_contract, log, near, require, serde_json::Value, AccountId, Gas, NearToken, Promise,
+};
 use parse::get_transactions;
 
 const PUBLIC_RLP_ENCODED_METHOD_NAMES: [&'static str; 1] = ["6a627842000000000000000000000000"];
@@ -45,16 +47,36 @@ impl Contract {
         // batch
     }
 
-    pub fn test_call(&mut self, pk: String, msg: String, sig: String) -> String {
+    pub fn test_call(&mut self, pk: String, msg: String, sig: String) -> Promise {
         owner::require_btc_owner(&pk, &msg, &sig);
 
-        let transactions = get_transactions(&msg);
+        let mut promise = Promise::new(env::current_account_id());
+        let transactions: Vec<Value> = get_transactions(&msg).as_array().unwrap().to_vec();
 
-        transactions[0].to_string()
+        log!("transactions {:?}", transactions);
 
-        // let batch = Promise::new(env::current_account_id()).transfer(NearToken::from_yoctonear(1));
+        for transaction in transactions.iter() {
+            let receiver_id = transaction["receiver_id"].to_string();
+            let receiver_id_slice = parse::remove_first_and_last(&receiver_id);
 
-        // batch
+            let mut next_promise = Promise::new(receiver_id_slice.parse::<AccountId>().unwrap());
+            let actions: Vec<Value> = transaction["actions"].as_array().unwrap().to_vec();
+
+            // TODO test multiple actions per promise. With mut promise?
+            for action in actions.iter() {
+                match action["type"].to_string().as_bytes() {
+                    b"Transfer" => {
+                        let amount = action["amount"].as_u64().unwrap() as u128;
+                        next_promise = next_promise.transfer(NearToken::from_yoctonear(amount));
+                    }
+                    _ => {}
+                }
+            }
+
+            promise = promise.then(next_promise);
+        }
+
+        promise
     }
 
     // DEPRECATED REFERENCE ONLY: proxy to call MPC_CONTRACT_ACCOUNT_ID method sign if COST is deposited

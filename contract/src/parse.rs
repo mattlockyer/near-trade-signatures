@@ -6,6 +6,13 @@ pub fn get_transactions(data: &str) -> Value {
     v["transactions"].clone()
 }
 
+pub fn remove_first_and_last(value: &str) -> &str {
+    let mut chars = value.chars();
+    chars.next();
+    chars.next_back();
+    chars.as_str()
+}
+
 #[test]
 fn test_parse() {
     let data = r#"

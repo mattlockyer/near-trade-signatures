@@ -32,6 +32,16 @@ export const view = async ({ pk, msg, sig }) => {
     console.log(res);
 };
 
+export const call = async ({ pk, msg, sig }) => {
+    const account = new Account(near.connection, accountId);
+    const res = await account.functionCall({
+        contractId,
+        methodName: 'test_call',
+        args: { pk, msg, sig },
+    });
+    console.log(res);
+};
+
 export const broadcast = async ({ pk, msg, sig }) => {
     const account = new Account(near.connection, accountId);
     const res = await account.functionCall({
