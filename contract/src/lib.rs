@@ -1,6 +1,7 @@
 use hex::decode;
 use near_sdk::{
     env, ext_contract, log, near, require, serde_json::Value, AccountId, Gas, NearToken, Promise,
+    PublicKey,
 };
 use parse::get_transactions;
 
@@ -52,22 +53,30 @@ impl Contract {
 
         let mut promise = Promise::new(env::current_account_id());
         let transactions: Vec<Value> = get_transactions(&msg).as_array().unwrap().to_vec();
-
-        log!("transactions {:?}", transactions);
+        let mut log_str = "Log:\n\n".to_string();
 
         for transaction in transactions.iter() {
-            let receiver_id = transaction["receiver_id"].to_string();
-            let receiver_id_slice = parse::remove_first_and_last(&receiver_id);
+            let receiver_id = parse::get_string(&transaction["receiver_id"]);
 
-            let mut next_promise = Promise::new(receiver_id_slice.parse::<AccountId>().unwrap());
+            let mut next_promise = Promise::new(receiver_id.parse::<AccountId>().unwrap());
             let actions: Vec<Value> = transaction["actions"].as_array().unwrap().to_vec();
 
             // TODO test multiple actions per promise. With mut promise?
             for action in actions.iter() {
-                match action["type"].to_string().as_bytes() {
+                match parse::get_string(&action["type"]).as_bytes() {
                     b"Transfer" => {
-                        let amount = action["amount"].as_u64().unwrap() as u128;
+                        let amount = parse::get_u128(&action["amount"]);
                         next_promise = next_promise.transfer(NearToken::from_yoctonear(amount));
+                    }
+                    b"AddFullAccessKey" => {
+                        let public_key = parse::get_string(&action["public_key"]);
+                        next_promise = next_promise
+                            .add_full_access_key(public_key.parse::<PublicKey>().unwrap());
+                    }
+                    b"DeleteKey" => {
+                        let public_key = parse::get_string(&action["public_key"]);
+                        next_promise =
+                            next_promise.delete_key(public_key.parse::<PublicKey>().unwrap());
                     }
                     _ => {}
                 }
@@ -75,6 +84,8 @@ impl Contract {
 
             promise = promise.then(next_promise);
         }
+
+        log!("log_str {:?}", log_str);
 
         promise
     }

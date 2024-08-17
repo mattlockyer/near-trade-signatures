@@ -6,11 +6,20 @@ pub fn get_transactions(data: &str) -> Value {
     v["transactions"].clone()
 }
 
-pub fn remove_first_and_last(value: &str) -> &str {
-    let mut chars = value.chars();
+pub fn get_string(value: &Value) -> String {
+    let str: String = value.to_string();
+    let mut chars = str.chars();
     chars.next();
     chars.next_back();
-    chars.as_str()
+    chars.as_str().to_string()
+}
+
+pub fn get_u128(value: &Value) -> u128 {
+    let str: String = value.to_string();
+    let mut chars = str.chars();
+    chars.next();
+    chars.next_back();
+    chars.as_str().to_string().parse::<u128>().unwrap()
 }
 
 #[test]

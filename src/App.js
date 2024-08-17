@@ -3,25 +3,22 @@ import { broadcast, call, view } from './near/near';
 import './styles/app.scss';
 
 // 10000000000000 gas is 10 Tgas
+// forgetful-parent.testnet is the contract so it should be able to add/delete key on itself
 const msg = `
 {
     "transactions": [
         {
-            "receiver_id": "magical-part.testnet",
+            "receiver_id": "forgetful-parent.testnet",
             "actions": [
-                { "type": "Transfer", "amount": "1", "gas": "10000000000000" }
+                { "type": "Transfer", "amount": "1", "gas": "10000000000000" },
+                { "type": "AddFullAccessKey", "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp" }
             ]
         },
         {
-            "receiver_id": "magical-part.testnet",
+            "receiver_id": "forgetful-parent.testnet",
             "actions": [
-                { "type": "Transfer", "amount": "1", "gas": "10000000000000" }
-            ]
-        },
-        {
-            "receiver_id": "magical-part.testnet",
-            "actions": [
-                { "type": "Transfer", "amount": "1", "gas": "10000000000000" }
+                { "type": "Transfer", "amount": "1", "gas": "10000000000000" },
+                { "type": "DeleteKey", "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp" }
             ]
         }
     ]
