@@ -8,17 +8,37 @@ const msg = `
 {
     "transactions": [
         {
+            "signer_id": "forgetful-parent.testnet",
+            "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp",
+            "nonce": 1,
             "receiver_id": "forgetful-parent.testnet",
+            "block_hash": "4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ",
             "actions": [
-                { "type": "Transfer", "amount": "1", "gas": "10000000000000" },
-                { "type": "AddFullAccessKey", "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp" }
+                { "Transfer": { "deposit": "1" } },
+                {
+                    "AddKey": {
+                        "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp",
+                        "access_key": {
+                            "nonce": 0,
+                            "permission": "FullAccess"
+                        }
+                    }
+                }
             ]
         },
         {
+            "signer_id": "forgetful-parent.testnet",
+            "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp",
+            "nonce": 1,
             "receiver_id": "forgetful-parent.testnet",
+            "block_hash": "4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ",
             "actions": [
-                { "type": "Transfer", "amount": "1", "gas": "10000000000000" },
-                { "type": "DeleteKey", "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp" }
+                { "Transfer": { "deposit": "1" } },
+                {
+                    "DeleteKey": {
+                        "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp"
+                    }
+                }
             ]
         }
     ]

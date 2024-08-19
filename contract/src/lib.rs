@@ -1,9 +1,11 @@
 use hex::decode;
-use near_sdk::{
-    env, ext_contract, log, near, require, serde_json::Value, AccountId, Gas, NearToken, Promise,
-    PublicKey,
-};
-use parse::get_transactions;
+use near_crypto::PublicKey as PublicKeyCrypto;
+use near_primitives::hash::CryptoHash;
+use near_primitives::transaction::TransactionV0;
+use near_sdk::env::sha256;
+use near_sdk::serde_json::{from_str, Value};
+use near_sdk::{borsh, env, ext_contract, log, near, require, AccountId, Gas, NearToken, Promise};
+use std::str::Chars;
 
 const PUBLIC_RLP_ENCODED_METHOD_NAMES: [&'static str; 1] = ["6a627842000000000000000000000000"];
 const MPC_CONTRACT_ACCOUNT_ID: &str = "v2.multichain-mpc.testnet";
@@ -30,64 +32,20 @@ pub struct Contract {}
 
 #[near]
 impl Contract {
-    // transfer Near if bitcoin signature is valid
-    pub fn test_view(&self, pk: String, msg: String, sig: String) -> String {
+    pub fn test_call(&mut self, pk: String, msg: String, sig: String) {
         owner::require_btc_owner(&pk, &msg, &sig);
 
-        let transactions: Vec<Value> = get_transactions(&msg).as_array().unwrap().to_vec();
+        let data_value: Value = from_str(&msg).unwrap();
+        let transactions = parse::get_transactions(&data_value["transactions"]);
 
-        let mut receivers = "".to_string();
-        for transaction in transactions.iter() {
-            receivers.push_str(&transaction["receiver_id"].to_string())
+        for transaction in transactions {
+            let encoded =
+                borsh::to_vec(&transaction).expect("failed to serialize NEAR transaction");
+            let tx_hash = sha256(&encoded);
+
+            log!("encoded tx: {:?}", encoded);
+            log!("tx_hash: {:?}", tx_hash);
         }
-
-        receivers
-
-        // let batch = Promise::new(env::current_account_id()).transfer(NearToken::from_yoctonear(1));
-
-        // batch
-    }
-
-    pub fn test_call(&mut self, pk: String, msg: String, sig: String) -> Promise {
-        owner::require_btc_owner(&pk, &msg, &sig);
-
-        let mut promise = Promise::new(env::current_account_id());
-        let transactions: Vec<Value> = get_transactions(&msg).as_array().unwrap().to_vec();
-        let mut log_str = "Log:\n\n".to_string();
-
-        for transaction in transactions.iter() {
-            let receiver_id = parse::get_string(&transaction["receiver_id"]);
-
-            let mut next_promise = Promise::new(receiver_id.parse::<AccountId>().unwrap());
-            let actions: Vec<Value> = transaction["actions"].as_array().unwrap().to_vec();
-
-            // TODO test multiple actions per promise. With mut promise?
-            for action in actions.iter() {
-                match parse::get_string(&action["type"]).as_bytes() {
-                    b"Transfer" => {
-                        let amount = parse::get_u128(&action["amount"]);
-                        next_promise = next_promise.transfer(NearToken::from_yoctonear(amount));
-                    }
-                    b"AddFullAccessKey" => {
-                        let public_key = parse::get_string(&action["public_key"]);
-                        next_promise = next_promise
-                            .add_full_access_key(public_key.parse::<PublicKey>().unwrap());
-                    }
-                    b"DeleteKey" => {
-                        let public_key = parse::get_string(&action["public_key"]);
-                        next_promise =
-                            next_promise.delete_key(public_key.parse::<PublicKey>().unwrap());
-                    }
-                    _ => {}
-                }
-            }
-
-            promise = promise.then(next_promise);
-        }
-
-        log!("log_str {:?}", log_str);
-
-        promise
     }
 
     // DEPRECATED REFERENCE ONLY: proxy to call MPC_CONTRACT_ACCOUNT_ID method sign if COST is deposited
