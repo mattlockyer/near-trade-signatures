@@ -114,6 +114,7 @@ const AppComp = ({ state, update }) => {
                                 return alert('accept connection');
                             }
                             const { address, publicKey } = res;
+
                             update({ address, pk: publicKey });
                         }}
                     >

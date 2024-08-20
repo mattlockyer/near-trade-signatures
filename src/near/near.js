@@ -34,12 +34,31 @@ export const view = async ({ pk, msg, sig }) => {
 
 export const call = async ({ pk, msg, sig }) => {
     const account = new Account(near.connection, accountId);
+
     const res = await account.functionCall({
-        contractId,
-        methodName: 'test_call',
-        args: { pk, msg, sig },
+        contractId: 'v1.signer-dev.testnet',
+        methodName: 'sign',
+        args: {
+            request: {
+                payload: Array.from({ length: 32 }, () =>
+                    Math.floor(Math.random() * 255),
+                ),
+                path: 'bitcoin,1',
+                key_version: 0,
+            },
+        },
+        attachedDeposit: 1,
+        gas: 250000000000000,
     });
     console.log(res);
+
+    // const account = new Account(near.connection, accountId);
+    // const res = await account.functionCall({
+    //     contractId,
+    //     methodName: 'test_call',
+    //     args: { pk, msg, sig },
+    // });
+    // console.log(res);
 };
 
 export const broadcast = async ({ pk, msg, sig }) => {
