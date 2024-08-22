@@ -1,55 +1,5 @@
 use crate::*;
-use near_sdk::serde::Deserialize;
-
-#[derive(Deserialize, BorshSerialize)]
-pub enum Action {
-    Transfer(TransferAction),
-    AddKey(Box<AddKeyAction>),
-    DeleteKey(Box<DeleteKeyAction>),
-}
-#[derive(Deserialize, BorshSerialize)]
-pub enum AccessKeyPermission {
-    FullAccess,
-}
-#[derive(Deserialize, BorshSerialize)]
-pub struct AccessKey {
-    pub nonce: u64,
-    pub permission: AccessKeyPermission,
-}
-#[derive(Deserialize, BorshSerialize)]
-pub struct AddKeyAction {
-    /// A public key which will be associated with an access_key
-    pub public_key: PublicKey,
-    /// An access key with the permission
-    pub access_key: AccessKey,
-}
-#[derive(Deserialize, BorshSerialize)]
-pub struct DeleteKeyAction {
-    /// A public key associated with the access_key to be deleted.
-    pub public_key: PublicKey,
-}
-#[derive(Deserialize, BorshSerialize)]
-pub struct TransferAction {
-    pub deposit: U128,
-}
-
-#[derive(BorshSerialize)]
-pub struct Transaction {
-    /// An account on which behalf transaction is signed
-    pub signer_id: AccountId,
-    /// A public key of the access key which was used to sign an account.
-    /// Access key holds permissions for calling certain kinds of actions.
-    pub public_key: PublicKey,
-    /// Nonce is used to determine order of transaction in the pool.
-    /// It increments for a combination of `signer_id` and `public_key`
-    pub nonce: u64,
-    /// Receiver account for this transaction
-    pub receiver_id: AccountId,
-    /// The hash of the block in the blockchain on top of which the given transaction is valid
-    pub block_hash: Vec<u8>,
-    /// A list of actions to be applied
-    pub actions: Vec<Action>,
-}
+use primitives::Transaction;
 
 pub fn get_chars(str: &str) -> Chars {
     let first = str[0..1].to_owned();
@@ -80,7 +30,7 @@ pub fn get_transactions(data: &Value) -> Vec<Transaction> {
     for jtx in json_transactions.iter() {
         let mut transaction = Transaction {
             signer_id: get_string(&jtx["signer_id"]).parse::<AccountId>().unwrap(),
-            public_key: get_string(&jtx["public_key"]).parse::<PublicKey>().unwrap(),
+            public_key: from_str(&jtx["public_key"].to_string()).unwrap(),
             nonce: jtx["nonce"].as_u64().unwrap(),
             receiver_id: get_string(&jtx["receiver_id"])
                 .parse::<AccountId>()

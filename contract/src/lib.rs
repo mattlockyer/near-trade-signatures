@@ -1,5 +1,4 @@
 use hex::decode;
-use near_crypto::PublicKey;
 use near_sdk::borsh::{self, BorshSerialize};
 use near_sdk::env::sha256;
 use near_sdk::json_types::U128;
@@ -13,14 +12,15 @@ const GAS: Gas = Gas::from_tgas(250);
 
 mod owner;
 mod parse;
+mod primitives;
 
-#[derive(BorshSerialize)]
+#[derive(Debug, BorshSerialize)]
 pub struct SignRequest {
     pub payload: [u8; 32],
     pub path: String,
     pub key_version: u32,
 }
-#[derive(BorshSerialize)]
+#[derive(Debug, BorshSerialize)]
 pub struct Request {
     pub request: SignRequest,
 }
@@ -38,36 +38,34 @@ pub struct Contract {}
 #[near]
 impl Contract {
     pub fn test_call(&mut self, pk: String, msg: String, sig: String) -> Promise {
+        log!("gas paid {:?}", env::prepaid_gas());
         owner::require_btc_owner(&pk, &msg, &sig);
-
         let data_value: Value = from_str(&msg).unwrap();
         let transactions = parse::get_transactions(&data_value["transactions"]);
-        let mut payloads: Vec<Vec<u8>> = vec![];
         let mut promise = Promise::new(env::current_account_id());
 
         for transaction in transactions {
             let encoded =
                 borsh::to_vec(&transaction).expect("failed to serialize NEAR transaction");
             let payload = sha256(&encoded);
-            payloads.push(payload);
-        }
 
-        for payload in payloads {
-            // call mpc sign and return promise
+            // mpc sign call args
             let request = Request {
                 request: SignRequest {
                     payload: parse::vec_to_fixed(payload),
-                    path: "bitcoin,1".to_string(),
+                    path: pk.clone(),
                     key_version: 0,
                 },
             };
-            let args = borsh::to_vec(&request).expect("failred to serialize args");
+            log!("request {:?}", request);
+            let args = borsh::to_vec(&request).expect("failed to serialize args");
+            // batch promises with .and
             let next_promise = Promise::new(MPC_CONTRACT_ACCOUNT_ID.parse().unwrap())
                 .function_call("sign".to_owned(), args, ONE_YOCTO, GAS);
-
-            promise = promise.and(next_promise);
+            promise = promise.then(next_promise);
         }
 
+        // return all promise calls
         promise
     }
 }
