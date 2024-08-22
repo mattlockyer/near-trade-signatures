@@ -1,3 +1,4 @@
+use external::{mpc_contract, SignRequest};
 use hex::decode;
 use near_sdk::borsh::{self, BorshSerialize};
 use near_sdk::env::sha256;
@@ -10,20 +11,10 @@ const MPC_CONTRACT_ACCOUNT_ID: &str = "v1.signer-dev.testnet";
 const ONE_YOCTO: NearToken = NearToken::from_yoctonear(1);
 const GAS: Gas = Gas::from_tgas(250);
 
+mod external;
 mod owner;
 mod parse;
 mod primitives;
-
-#[derive(Debug, BorshSerialize)]
-pub struct SignRequest {
-    pub payload: [u8; 32],
-    pub path: String,
-    pub key_version: u32,
-}
-#[derive(Debug, BorshSerialize)]
-pub struct Request {
-    pub request: SignRequest,
-}
 
 // automatically init the contract
 impl Default for Contract {
@@ -50,18 +41,18 @@ impl Contract {
             let payload = sha256(&encoded);
 
             // mpc sign call args
-            let request = Request {
-                request: SignRequest {
-                    payload: parse::vec_to_fixed(payload),
-                    path: pk.clone(),
-                    key_version: 0,
-                },
+            let request = SignRequest {
+                payload: parse::vec_to_fixed(payload),
+                path: pk.clone(),
+                key_version: 0,
             };
             log!("request {:?}", request);
-            let args = borsh::to_vec(&request).expect("failed to serialize args");
             // batch promises with .and
-            let next_promise = Promise::new(MPC_CONTRACT_ACCOUNT_ID.parse().unwrap())
-                .function_call("sign".to_owned(), args, ONE_YOCTO, GAS);
+            let next_promise = mpc_contract::ext(MPC_CONTRACT_ACCOUNT_ID.parse().unwrap())
+                .with_static_gas(GAS)
+                .with_attached_deposit(ONE_YOCTO)
+                .sign(request);
+
             promise = promise.then(next_promise);
         }
 

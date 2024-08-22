@@ -30,6 +30,22 @@ const msg = `
 }
 `;
 
+// {
+//     "signer_id": "forgetful-parent.testnet",
+//     "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp",
+//     "nonce": 1,
+//     "receiver_id": "forgetful-parent.testnet",
+//     "block_hash": "4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ",
+//     "actions": [
+//         { "Transfer": { "deposit": "1" } },
+//         {
+//             "DeleteKey": {
+//                 "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp"
+//             }
+//         }
+//     ]
+// }
+
 const AppComp = ({ state, update }) => {
     const { address, pk, sig } = state;
 
