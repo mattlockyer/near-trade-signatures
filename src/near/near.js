@@ -22,6 +22,14 @@ const config = {
 };
 const near = new Near(config);
 
+export const addKey = async ({ accountId, secretKey, publicKey }) => {
+    const keyPair = KeyPair.fromString(secretKey);
+    keyStore.setKey(networkId, accountId, keyPair);
+    const account = new Account(near.connection, accountId);
+    const res = await account.addKey(publicKey);
+    console.log('addKey res', res);
+};
+
 export const view = async ({ pk, msg, sig }) => {
     const account = new Account(near.connection, accountId);
     const res = await account.viewFunction({
