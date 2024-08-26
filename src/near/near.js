@@ -21,6 +21,7 @@ const config = {
     explorerUrl: 'https://testnet.nearblocks.io',
 };
 const near = new Near(config);
+const { provider } = near.connection;
 
 export const addKey = async ({ accountId, secretKey, publicKey }) => {
     const keyPair = KeyPair.fromString(secretKey);
@@ -28,6 +29,16 @@ export const addKey = async ({ accountId, secretKey, publicKey }) => {
     const account = new Account(near.connection, accountId);
     const res = await account.addKey(publicKey);
     console.log('addKey res', res);
+};
+
+export const getBlockHash = async () => {
+    const block = await near.connection.provider.block({ finality: 'final' });
+    return block.header.hash;
+};
+
+export const getKeys = async ({ accountId }) => {
+    const account = new Account(near.connection, accountId);
+    return await account.getAccessKeys();
 };
 
 export const view = async ({ pk, msg, sig }) => {
@@ -66,15 +77,12 @@ export const call = async ({ pk, msg, sig }) => {
         args: { pk, msg, sig },
         gas: BigInt('300000000000000'),
     });
-    console.log(res);
+    return res;
 };
 
-export const broadcast = async ({ pk, msg, sig }) => {
-    const account = new Account(near.connection, accountId);
-    const res = await account.functionCall({
-        contractId,
-        methodName: 'test',
-        args: { pk, msg, sig },
-    });
-    console.log(res);
+export const broadcast = async (signedSerializedTx) => {
+    const res = await provider.sendJsonRpc('broadcast_tx_commit', [
+        Buffer.from(signedSerializedTx).toString('base64'),
+    ]);
+    return res;
 };
