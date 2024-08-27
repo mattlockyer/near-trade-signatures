@@ -186,15 +186,12 @@ const AppComp = ({ state, update }) => {
                                     },
                                 );
 
-                                // console.log('transaction', transaction);
-
-                                // test transaction will serialize
-                                // const serializedTx =
-                                //     nearAPI.utils.serialize.serialize(
-                                //         nearAPI.transactions.SCHEMA.Transaction,
-                                //         transaction,
-                                //     );
-                                // console.log('serializedTx', serializedTx);
+                                const serializedTx =
+                                    nearAPI.utils.serialize.serialize(
+                                        nearAPI.transactions.SCHEMA.Transaction,
+                                        transaction,
+                                    );
+                                console.log('serializedTx', serializedTx);
 
                                 const signedTransaction =
                                     new nearAPI.transactions.SignedTransaction({
@@ -226,7 +223,6 @@ const AppComp = ({ state, update }) => {
                                 update({ sig });
                             } catch (e) {
                                 console.log(e);
-                                return alert('accept signature');
                             }
                         }}
                     >
