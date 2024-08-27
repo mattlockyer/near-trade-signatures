@@ -1,4 +1,3 @@
-use crate::*;
 use near_sdk::ext_contract;
 use serde::Serialize;
 
@@ -11,5 +10,5 @@ pub struct SignRequest {
 
 #[ext_contract(mpc_contract)]
 trait MPCContract {
-    fn sign(&self, request: SignRequest) -> Value;
+    fn sign(&self, request: SignRequest);
 }

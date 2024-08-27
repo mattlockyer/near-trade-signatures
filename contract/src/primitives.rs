@@ -6,8 +6,7 @@ use std::io::{Error, Write}; // 1.0.94
 
 extern crate serde;
 
-pub const ED25519_PUBLIC_KEY_LENGTH: usize = 32;
-pub const SECP256K1_PUBLIC_KEY_LENGTH: usize = 64;
+// Transactions
 
 #[derive(Debug, Deserialize, BorshSerialize)]
 pub enum Action {
@@ -60,6 +59,9 @@ pub struct Transaction {
 }
 
 // Public Key
+
+pub const ED25519_PUBLIC_KEY_LENGTH: usize = 32;
+pub const SECP256K1_PUBLIC_KEY_LENGTH: usize = 64;
 
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Deserialize)]
 pub struct Secp256K1PublicKey(#[serde(with = "BigArray")] pub [u8; SECP256K1_PUBLIC_KEY_LENGTH]);
@@ -118,4 +120,24 @@ impl From<[u8; 64]> for Secp256K1PublicKey {
     fn from(data: [u8; 64]) -> Self {
         Self(data)
     }
+}
+
+// Signature (only ecdsa)
+
+const SECP256K1_SIGNATURE_LENGTH: usize = 65;
+#[derive(BorshSerialize, Clone, Copy, Eq, PartialEq, Hash)]
+pub struct Secp256K1Signature(pub [u8; SECP256K1_SIGNATURE_LENGTH]);
+
+#[derive(BorshSerialize, Clone, Copy, PartialEq, Eq)]
+pub enum Signature {
+    ED25519(Secp256K1Signature), // not implemented MPC only produces ecdsa signatures
+    SECP256K1(Secp256K1Signature),
+}
+
+// Signed Transaction
+
+#[derive(BorshSerialize)]
+pub struct SignedTransaction {
+    pub signature: Signature,
+    pub transaction: Transaction,
 }

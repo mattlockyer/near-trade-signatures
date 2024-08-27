@@ -4,7 +4,9 @@ use near_sdk::borsh::{self, BorshSerialize};
 use near_sdk::env::sha256;
 use near_sdk::json_types::U128;
 use near_sdk::serde_json::{from_str, Value};
-use near_sdk::{env, log, near, require, AccountId, Gas, NearToken, Promise, PromiseError};
+use near_sdk::{env, log, near, require, AccountId, Gas, NearToken, Promise};
+use parse::vec_to_fixed;
+use primitives::SignedTransaction;
 use std::str::Chars;
 
 const MPC_CONTRACT_ACCOUNT_ID: &str = "v1.signer-dev.testnet";
@@ -54,34 +56,39 @@ impl Contract {
             promise = promise.then(next_promise);
         }
 
-        // return all promise calls
-        return promise.then(
-            // Create a promise to callback query_greeting_callback
-            Self::ext(env::current_account_id())
-                .with_static_gas(Gas::from_tgas(5))
-                .test_call_callback(),
-        );
+        promise
     }
 
-    #[private]
-    pub fn test_call_callback(
-        &self,
-        #[callback_result] call_result: Result<Value, PromiseError>,
-    ) -> String {
-        if call_result.is_err() {
-            log!("There was an error in the callback");
-            return "".to_string();
-        }
+    pub fn build_transactions(&self, msg: String, sig: String) -> Vec<Vec<u8>> {
+        let data_value: Value = from_str(&msg).unwrap();
+        let transactions = parse::get_transactions(&data_value["transactions"]);
+        let mut signed_serialized_txs = vec![];
 
-        let result: Value = call_result.unwrap();
-
-        let big_r: String = parse::get_string(&result["big_r"]["affine_point"]);
+        let sig_value: Value = from_str(&sig).unwrap();
+        let big_r: String = parse::get_string(&sig_value["big_r"]["affine_point"]);
         log!("big_r: {:?}", big_r);
-        let s: String = parse::get_string(&result["s"]["scalar"]);
+        let s: String = parse::get_string(&sig_value["s"]["scalar"]);
         log!("s: {:?}", s);
-        let recovery_id: u8 = result["recovery_id"].as_u64().unwrap() as u8;
+        let recovery_id: u8 = sig_value["recovery_id"].as_u64().unwrap() as u8;
         log!("recovery_id: {:?}", recovery_id);
 
-        return "success".to_string();
+        let mut sig_vec = vec![];
+        sig_vec.append(&mut decode(big_r).unwrap());
+        sig_vec.append(&mut decode(s).unwrap());
+
+        let signature =
+            primitives::Signature::SECP256K1(primitives::Secp256K1Signature(vec_to_fixed(sig_vec)));
+
+        for transaction in transactions {
+            let signed_tx: SignedTransaction = SignedTransaction {
+                signature,
+                transaction,
+            };
+            let encoded =
+                borsh::to_vec(&signed_tx).expect("failed to serialize signed NEAR transaction");
+            signed_serialized_txs.push(encoded);
+        }
+
+        signed_serialized_txs
     }
 }

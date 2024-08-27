@@ -2,7 +2,13 @@ import { wrap } from './state/state';
 import * as nearAPI from 'near-api-js';
 const { PublicKey } = nearAPI.utils;
 const { base_decode } = nearAPI.utils.serialize;
-import { broadcast, call, view, getKeys, getBlockHash } from './near/near';
+import {
+    broadcast,
+    call,
+    buildTransactions,
+    getKeys,
+    getBlockHash,
+} from './near/near';
 import './styles/app.scss';
 import { generateAddress } from './near/kdf';
 const { REACT_APP_contractId } = process.env;
@@ -111,114 +117,39 @@ const AppComp = ({ state, update }) => {
                                     );
 
                                 // TESTING
-                                const res =
-                                    // {
-                                    //     status: {
-                                    //         SuccessValue:
-                                    //             'eyJiaWdfciI6eyJhZmZpbmVfcG9pbnQiOiIwMjcxMTI3QkNDMkNCQzFBM0JENEVDOTFBNEJFRTc3NTc2REI1QjhDNUU0MjREMjhCMUY3NEFFRjBCNTA2QkI4Q0UifSwicyI6eyJzY2FsYXIiOiIxMzIyRTQyNjc4ODhBRjMxNTNBMzVGRTU5Nzc3RDAxOTVDNjcyRjcyMTA2MTVEQjI1NDk2NzkyRDAwNjYzQ0M2In0sInJlY292ZXJ5X2lkIjowfQ==',
-                                    //     },
-                                    // } ||
-                                    await call({
-                                        pk,
-                                        msg: JSON.stringify(msg),
-                                        sig,
-                                    });
+                                // const res =
+                                //     // {
+                                //     //     status: {
+                                //     //         SuccessValue:
+                                //     //             'eyJiaWdfciI6eyJhZmZpbmVfcG9pbnQiOiIwMjcxMTI3QkNDMkNCQzFBM0JENEVDOTFBNEJFRTc3NTc2REI1QjhDNUU0MjREMjhCMUY3NEFFRjBCNTA2QkI4Q0UifSwicyI6eyJzY2FsYXIiOiIxMzIyRTQyNjc4ODhBRjMxNTNBMzVGRTU5Nzc3RDAxOTVDNjcyRjcyMTA2MTVEQjI1NDk2NzkyRDAwNjYzQ0M2In0sInJlY292ZXJ5X2lkIjowfQ==',
+                                //     //     },
+                                //     // } ||
+                                //     await call({
+                                //         pk,
+                                //         msg: JSON.stringify(msg),
+                                //         sig,
+                                //     });
 
-                                const sigRes = JSON.parse(
-                                    Buffer.from(
-                                        res.status.SuccessValue,
-                                        'base64',
-                                    ).toString(),
-                                );
-                                console.log('sigRes', sigRes);
+                                // const sigRes = JSON.parse(
+                                //     Buffer.from(
+                                //         res.status.SuccessValue,
+                                //         'base64',
+                                //     ).toString(),
+                                // );
+                                // console.log('sigRes', sigRes);
 
-                                const transaction = JSON.parse(
-                                    JSON.stringify(msg.transactions[0]),
-                                );
-                                Object.entries(core2jsKeys).forEach(
-                                    ([k, v]) => {
-                                        transaction[v] = transaction[k];
-                                        if (v !== k) delete transaction[k];
-                                        // pre-serialize types from json
-                                        if (v === 'publicKey') {
-                                            transaction[v] =
-                                                PublicKey.fromString(
-                                                    transaction[v],
-                                                );
-                                        }
-                                        if (v === 'blockHash') {
-                                            transaction[v] = base_decode(
-                                                transaction[v],
-                                            );
-                                        }
-
-                                        if (v === 'actions') {
-                                            for (const action of transaction[
-                                                v
-                                            ]) {
-                                                const [k2] =
-                                                    Object.entries(action)[0];
-                                                Object.entries(
-                                                    core2jsActions,
-                                                ).forEach(([k, v]) => {
-                                                    if (k !== k2) return;
-                                                    action[v] = action[k];
-                                                    delete action[k];
-                                                    if (v === 'addKey') {
-                                                        action[v] = {
-                                                            publicKey:
-                                                                PublicKey.fromString(
-                                                                    action[v]
-                                                                        .public_key,
-                                                                ),
-                                                            accessKey: {
-                                                                nonce: 0,
-                                                                permission: {
-                                                                    fullAccess:
-                                                                        {},
-                                                                },
-                                                            },
-                                                        };
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    },
-                                );
-
-                                const serializedTx =
-                                    nearAPI.utils.serialize.serialize(
-                                        nearAPI.transactions.SCHEMA.Transaction,
-                                        transaction,
-                                    );
-                                console.log('serializedTx', serializedTx);
-
-                                const signedTransaction =
-                                    new nearAPI.transactions.SignedTransaction({
-                                        transaction,
-                                        signature:
-                                            new nearAPI.transactions.Signature({
-                                                keyType: 1,
-                                                data: Buffer.concat([
-                                                    Buffer.from(
-                                                        sigRes.big_r
-                                                            .affine_point,
-                                                        'hex',
-                                                    ),
-                                                    Buffer.from(
-                                                        sigRes.s.scalar,
-                                                        'hex',
-                                                    ),
-                                                ]),
-                                            }),
-                                    });
-
-                                console.log(signedTransaction);
-                                // encodes transaction to serialized Borsh (required for all transactions)
                                 const signedSerializedTx =
-                                    signedTransaction.encode();
+                                    await buildTransactions({
+                                        msg: JSON.stringify(msg),
+                                        sig: `{"big_r":{"affine_point":"0282EF82B8EE5BA52EC356F7BBEE935B70A67D635F7F8D887FFDC70D2D943088FC"},"s":{"scalar":"6062C50A8A7806284A0C3886E53BA9F2DB23693912F3127ED902020923DD4A8E"},"recovery_id":1}`, //JSON.stringify(sigRes),
+                                    });
+                                console.log(
+                                    'signedSerializedTx',
+                                    signedSerializedTx[0],
+                                );
+
                                 // sends transaction to NEAR blockchain via JSON RPC call and records the result
-                                const result = broadcast(signedSerializedTx);
+                                const result = broadcast(signedSerializedTx[0]);
 
                                 update({ sig });
                             } catch (e) {

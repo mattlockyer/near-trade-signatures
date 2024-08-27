@@ -57,6 +57,20 @@ pub fn get_transactions(data: &Value) -> Vec<Transaction> {
 }
 
 #[test]
+fn test_parse() {
+    let sig = r#"
+    {"big_r":{"affine_point":"0282EF82B8EE5BA52EC356F7BBEE935B70A67D635F7F8D887FFDC70D2D943088FC"},"s":{"scalar":"6062C50A8A7806284A0C3886E53BA9F2DB23693912F3127ED902020923DD4A8E"},"recovery_id":1}
+    "#;
+    let sig_value: Value = from_str(&sig).unwrap();
+    let big_r: String = parse::get_string(&sig_value["big_r"]["affine_point"]);
+    log!("big_r: {:?}", big_r);
+    let s: String = parse::get_string(&sig_value["s"]["scalar"]);
+    log!("s: {:?}", s);
+    let recovery_id: u8 = sig_value["recovery_id"].as_u64().unwrap() as u8;
+    log!("recovery_id: {:?}", recovery_id);
+}
+
+#[test]
 fn test_get_transactions() {
     let data = r#"
 {
