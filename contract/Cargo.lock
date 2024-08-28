@@ -247,6 +247,7 @@ dependencies = [
  "hex",
  "near-crypto",
  "near-sdk",
+ "omni-transaction",
  "serde",
  "serde-big-array",
  "serde_json",
@@ -1092,6 +1093,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "omni-transaction"
+version = "0.1.0"
+source = "git+https://github.com/edsonalcala/omni-transaction-rs.git?branch=fix-serializing-issues#8e99cb292aed77b38ce3b01b63293d2180e4d176"
+dependencies = [
+ "borsh",
+ "bs58 0.5.1",
+ "hex",
+ "near-sdk",
+ "rlp",
+ "serde-big-array",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1314,6 +1328,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd124222d17ad93a644ed9d011a40f4fb64aa54275c08cc216524a9ea82fb09f"
 dependencies = [
  "digest",
+]
+
+[[package]]
+name = "rlp"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb919243f34364b6bd2fc10ef797edbfa75f33c252e7998527479c6d6b47e1ec"
+dependencies = [
+ "bytes",
+ "rustc-hex",
 ]
 
 [[package]]

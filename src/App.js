@@ -1,13 +1,18 @@
 import { wrap } from './state/state';
 import * as nearAPI from 'near-api-js';
-const { PublicKey } = nearAPI.utils;
-const { base_decode } = nearAPI.utils.serialize;
+import { sha256, KeyPairSecp256k1 } from 'noble-hashes/lib/sha256';
+let elliptic = require('elliptic');
+let ec = new elliptic.ec('secp256k1');
+
+const { KeyPair } = nearAPI;
 import {
     broadcast,
     call,
+    core2jsTransaction,
     buildTransactions,
     getKeys,
     getBlockHash,
+    mpcPublicKey,
 } from './near/near';
 import './styles/app.scss';
 import { generateAddress } from './near/kdf';
@@ -15,29 +20,17 @@ const { REACT_APP_contractId } = process.env;
 const MPC_PUBLIC_KEY =
     'secp256k1:54hU5wcCmVUPFWLDALXMh1fFToZsVXrx9BbTbHzSfQq1Kd1rJZi52iPa4QQxo6s5TgjWqgpY8HamYuUDzG6fAaUq';
 
-const core2jsKeys = {
-    signer_id: 'signerId',
-    public_key: 'publicKey',
-    receiver_id: 'receiverId',
-    nonce: 'nonce',
-    block_hash: 'blockHash',
-    actions: 'actions',
-};
-const core2jsActions = {
-    AddKey: 'addKey',
-    Transfer: 'transfer',
-};
-
 const defaultMsg = {
     transactions: [
         {
-            signer_id: 'forgetful-parent.testnet',
-            public_key: 'ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp',
-            nonce: 1,
+            signer_id:
+                '86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381',
+            public_key: 'ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52',
+            nonce: 172237399000001,
             receiver_id: 'forgetful-parent.testnet',
             block_hash: '4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ',
             actions: [
-                { Transfer: { deposit: '1' } },
+                { Transfer: { deposit: 1 } },
                 {
                     AddKey: {
                         public_key:
@@ -116,40 +109,88 @@ const AppComp = ({ state, update }) => {
                                         'ecdsa',
                                     );
 
-                                // TESTING
-                                // const res =
-                                //     // {
-                                //     //     status: {
-                                //     //         SuccessValue:
-                                //     //             'eyJiaWdfciI6eyJhZmZpbmVfcG9pbnQiOiIwMjcxMTI3QkNDMkNCQzFBM0JENEVDOTFBNEJFRTc3NTc2REI1QjhDNUU0MjREMjhCMUY3NEFFRjBCNTA2QkI4Q0UifSwicyI6eyJzY2FsYXIiOiIxMzIyRTQyNjc4ODhBRjMxNTNBMzVGRTU5Nzc3RDAxOTVDNjcyRjcyMTA2MTVEQjI1NDk2NzkyRDAwNjYzQ0M2In0sInJlY292ZXJ5X2lkIjowfQ==',
-                                //     //     },
-                                //     // } ||
-                                //     await call({
-                                //         pk,
-                                //         msg: JSON.stringify(msg),
-                                //         sig,
-                                //     });
+                                const res = await call({
+                                    pk,
+                                    msg: JSON.stringify(msg),
+                                    sig,
+                                });
 
+                                const sigRes = JSON.parse(
+                                    Buffer.from(
+                                        res.status.SuccessValue,
+                                        'base64',
+                                    ).toString(),
+                                );
                                 // const sigRes = JSON.parse(
-                                //     Buffer.from(
-                                //         res.status.SuccessValue,
-                                //         'base64',
-                                //     ).toString(),
+                                //     `{"big_r":{"affine_point":"026514FBA456D74D7773E0BBFCA7458E1DBC63C524E593B7A8391BDF6AFFB1AA04"},"s":{"scalar":"3D0C03B2A1F754DE1B553F9B3B6CC18F47B446E6A21DB2B4710C02B653956749"},"recovery_id":1}`,
                                 // );
-                                // console.log('sigRes', sigRes);
+                                console.log('sigRes', sigRes);
 
-                                const signedSerializedTx =
-                                    await buildTransactions({
-                                        msg: JSON.stringify(msg),
-                                        sig: `{"big_r":{"affine_point":"0282EF82B8EE5BA52EC356F7BBEE935B70A67D635F7F8D887FFDC70D2D943088FC"},"s":{"scalar":"6062C50A8A7806284A0C3886E53BA9F2DB23693912F3127ED902020923DD4A8E"},"recovery_id":1}`, //JSON.stringify(sigRes),
-                                    });
-                                console.log(
-                                    'signedSerializedTx',
-                                    signedSerializedTx[0],
+                                const transaction = await core2jsTransaction(
+                                    msg.transactions[0],
                                 );
 
+                                const serializedTx =
+                                    nearAPI.utils.serialize.serialize(
+                                        nearAPI.transactions.SCHEMA.Transaction,
+                                        transaction,
+                                    );
+                                console.log('serializedTx', serializedTx);
+                                const serializedTxHash = sha256(serializedTx);
+                                console.log(
+                                    'serializedTxHash',
+                                    serializedTxHash,
+                                );
+
+                                let pubKeyRecovered = ec.recoverPubKey(
+                                    serializedTxHash,
+                                    {
+                                        r: Buffer.from(
+                                            sigRes.big_r.affine_point.substring(
+                                                2,
+                                            ),
+                                            'hex',
+                                        ),
+                                        s: Buffer.from(sigRes.s.scalar, 'hex'),
+                                    },
+                                    sigRes.recovery_id,
+                                    'hex',
+                                );
+                                console.log(
+                                    'pubKeyRecovered',
+                                    pubKeyRecovered.encode('hex'),
+                                );
+
+                                const signedTransaction =
+                                    new nearAPI.transactions.SignedTransaction({
+                                        transaction,
+                                        signature:
+                                            new nearAPI.transactions.Signature({
+                                                keyType: 1,
+                                                data: Buffer.concat([
+                                                    Buffer.from(
+                                                        sigRes.big_r
+                                                            .affine_point,
+                                                        'hex',
+                                                    ),
+                                                    Buffer.from(
+                                                        sigRes.s.scalar,
+                                                        'hex',
+                                                    ),
+                                                ]),
+                                            }),
+                                    });
+
+                                console.log(signedTransaction);
+                                // encodes transaction to serialized Borsh (required for all transactions)
+                                const signedSerializedTx =
+                                    signedTransaction.encode();
                                 // sends transaction to NEAR blockchain via JSON RPC call and records the result
-                                const result = broadcast(signedSerializedTx[0]);
+                                const result = await broadcast(
+                                    signedSerializedTx,
+                                );
+
+                                console.log('result', result);
 
                                 update({ sig });
                             } catch (e) {
@@ -181,6 +222,9 @@ const AppComp = ({ state, update }) => {
                                     chain: 'near',
                                 });
 
+                            console.log('implicit accountId', accountId);
+                            console.log('nearSecpPublicKey', nearSecpPublicKey);
+
                             const accessKeys = await getKeys({
                                 accountId,
                             });
@@ -190,7 +234,7 @@ const AppComp = ({ state, update }) => {
                             const { nonce } = secpKey.access_key;
                             const block_hash = await getBlockHash();
 
-                            // update the default message to sign with the latest information
+                            // update default message to sign with the latest information
                             const msg = JSON.parse(JSON.stringify(defaultMsg));
                             msg.transactions[0].signer_id = accountId;
                             msg.transactions[0].public_key = nearSecpPublicKey;

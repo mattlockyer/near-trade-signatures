@@ -6,7 +6,6 @@ use near_sdk::json_types::U128;
 use near_sdk::serde_json::{from_str, Value};
 use near_sdk::{env, log, near, require, AccountId, Gas, NearToken, Promise};
 use parse::vec_to_fixed;
-use primitives::SignedTransaction;
 use std::str::Chars;
 
 const MPC_CONTRACT_ACCOUNT_ID: &str = "v1.signer-dev.testnet";
@@ -16,7 +15,6 @@ const GAS: Gas = Gas::from_tgas(250);
 mod external;
 mod owner;
 mod parse;
-mod primitives;
 
 // automatically init the contract
 impl Default for Contract {
@@ -39,7 +37,16 @@ impl Contract {
         for transaction in transactions {
             let encoded =
                 borsh::to_vec(&transaction).expect("failed to serialize NEAR transaction");
+
+            log!("encoded");
+            log!("{:?}", encoded.clone());
+
             let payload = sha256(&encoded);
+
+            log!("payload");
+            log!("{:?}", payload);
+            log!("path");
+            log!("{:?}", pk.clone());
 
             // mpc sign call args
             let request = SignRequest {
@@ -57,38 +64,5 @@ impl Contract {
         }
 
         promise
-    }
-
-    pub fn build_transactions(&self, msg: String, sig: String) -> Vec<Vec<u8>> {
-        let data_value: Value = from_str(&msg).unwrap();
-        let transactions = parse::get_transactions(&data_value["transactions"]);
-        let mut signed_serialized_txs = vec![];
-
-        let sig_value: Value = from_str(&sig).unwrap();
-        let big_r: String = parse::get_string(&sig_value["big_r"]["affine_point"]);
-        log!("big_r: {:?}", big_r);
-        let s: String = parse::get_string(&sig_value["s"]["scalar"]);
-        log!("s: {:?}", s);
-        let recovery_id: u8 = sig_value["recovery_id"].as_u64().unwrap() as u8;
-        log!("recovery_id: {:?}", recovery_id);
-
-        let mut sig_vec = vec![];
-        sig_vec.append(&mut decode(big_r).unwrap());
-        sig_vec.append(&mut decode(s).unwrap());
-
-        let signature =
-            primitives::Signature::SECP256K1(primitives::Secp256K1Signature(vec_to_fixed(sig_vec)));
-
-        for transaction in transactions {
-            let signed_tx: SignedTransaction = SignedTransaction {
-                signature,
-                transaction,
-            };
-            let encoded =
-                borsh::to_vec(&signed_tx).expect("failed to serialize signed NEAR transaction");
-            signed_serialized_txs.push(encoded);
-        }
-
-        signed_serialized_txs
     }
 }

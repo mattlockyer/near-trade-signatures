@@ -1917,7 +1917,7 @@ elliptic@^6.5.3, elliptic@^6.5.5:
     minimalistic-assert "^1.0.1"
     minimalistic-crypto-utils "^1.0.1"
 
-elliptic@^6.5.4:
+elliptic@^6.5.4, elliptic@^6.5.7:
   version "6.5.7"
   resolved "https://registry.yarnpkg.com/elliptic/-/elliptic-6.5.7.tgz#8ec4da2cb2939926a1b9a73619d768207e647c8b"
   integrity sha512-ESVCtTwiA+XhY3wyh24QqRGBoP3rEdDUl3EDUUo9tft074fi19IrdpH7hLCMMP3CIj7jb3W96rn8lt/BqIlt5Q==
@@ -2859,6 +2859,11 @@ near-seed-phrase@^0.2.1:
     bs58 "^4.0.1"
     near-hd-key "^1.2.1"
     tweetnacl "^1.0.2"
+
+noble-hashes@^0.3.1:
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/noble-hashes/-/noble-hashes-0.3.1.tgz#8c6085b779509b09d2f2d2aecce67650fb411d1c"
+  integrity sha512-TpYvlZvM8nGB582H9qQdTCLTNPS4TX9r5gkB4iiCWlO/URrdFJKAKwzwwEcNYPhLrcmCvBF1Nfm25GMbFWEplw==
 
 node-addon-api@^2.0.0:
   version "2.0.2"

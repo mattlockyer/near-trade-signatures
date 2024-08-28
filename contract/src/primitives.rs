@@ -4,16 +4,53 @@ use parse::vec_to_fixed;
 use serde_big_array::BigArray;
 use std::io::{Error, Write}; // 1.0.94
 
-extern crate serde;
-
 // Transactions
 
 #[derive(Debug, Deserialize, BorshSerialize)]
+// Actions
 pub enum Action {
+    /// Create an (sub)account using a transaction `receiver_id` as an ID for
+    /// a new account ID must pass validation rules described here
+    /// <http://nomicon.io/Primitives/Account.html>.
+    CreateAccount(CreateAccountAction),
+    /// Sets a Wasm code to a receiver_id
+    DeployContract(DeployContractAction),
+    FunctionCall(Box<FunctionCallAction>),
     Transfer(TransferAction),
+    Stake(Box<StakeAction>),
     AddKey(Box<AddKeyAction>),
     DeleteKey(Box<DeleteKeyAction>),
 }
+
+#[derive(Debug, Deserialize, BorshSerialize)]
+pub struct CreateAccountAction {}
+
+#[derive(Debug, Deserialize, BorshSerialize)]
+pub struct DeployContractAction {
+    pub code: Vec<u8>,
+}
+
+#[derive(Debug, Deserialize, BorshSerialize)]
+pub struct FunctionCallAction {
+    pub method_name: String,
+    pub args: Vec<u8>,
+    pub gas: u64,
+    pub deposit: u128,
+}
+
+#[derive(Debug, Deserialize, BorshSerialize)]
+pub struct TransferAction {
+    pub deposit: U128,
+}
+
+#[derive(Debug, Deserialize, BorshSerialize)]
+pub struct StakeAction {
+    /// Amount of tokens to stake.
+    pub stake: u128,
+    /// Validator key which will be used to sign transactions on behalf of signer_id
+    pub public_key: PublicKey,
+}
+
 #[derive(Debug, Deserialize, BorshSerialize)]
 pub enum AccessKeyPermission {
     FullAccess,
@@ -35,10 +72,6 @@ pub struct DeleteKeyAction {
     /// A public key associated with the access_key to be deleted.
     pub public_key: PublicKey,
 }
-#[derive(Debug, Deserialize, BorshSerialize)]
-pub struct TransferAction {
-    pub deposit: U128,
-}
 
 #[derive(Debug, BorshSerialize, Deserialize)]
 pub struct Transaction {
@@ -53,7 +86,7 @@ pub struct Transaction {
     /// Receiver account for this transaction
     pub receiver_id: AccountId,
     /// The hash of the block in the blockchain on top of which the given transaction is valid
-    pub block_hash: Vec<u8>,
+    pub block_hash: [u8; 32],
     /// A list of actions to be applied
     pub actions: Vec<Action>,
 }

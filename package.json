@@ -33,10 +33,12 @@
     },
     "dependencies": {
         "bs58check": "^4.0.0",
+        "elliptic": "^6.5.7",
         "js-sha3": "^0.9.3",
         "keccak": "^3.0.4",
         "near-api-js": "^4.0.4",
         "near-seed-phrase": "^0.2.1",
+        "noble-hashes": "^0.3.1",
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
     }

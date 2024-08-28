@@ -41,6 +41,16 @@ export const getKeys = async ({ accountId }) => {
     return await account.getAccessKeys();
 };
 
+export const mpcPublicKey = async () => {
+    const account = new Account(near.connection, accountId);
+    const res = await account.viewFunction({
+        contractId: 'v1.signer-dev.testnet',
+        methodName: 'public_key',
+        args: {},
+    });
+    return res;
+};
+
 export const view = async ({ pk, msg, sig }) => {
     const account = new Account(near.connection, accountId);
     const res = await account.viewFunction({
@@ -77,4 +87,60 @@ export const broadcast = async (signedSerializedTx) => {
         Buffer.from(signedSerializedTx).toString('base64'),
     ]);
     return res;
+};
+
+// transaction fix for JSON for contracts, to JS
+
+const { PublicKey } = nearAPI.utils;
+const { base_decode } = nearAPI.utils.serialize;
+
+const core2jsKeys = {
+    signer_id: 'signerId',
+    public_key: 'publicKey',
+    receiver_id: 'receiverId',
+    nonce: 'nonce',
+    block_hash: 'blockHash',
+    actions: 'actions',
+};
+const core2jsActions = {
+    AddKey: 'addKey',
+    Transfer: 'transfer',
+};
+export const core2jsTransaction = async (transaction) => {
+    Object.entries(core2jsKeys).forEach(([k, v]) => {
+        transaction[v] = transaction[k];
+        if (v !== k) delete transaction[k];
+        // pre-serialize types from json
+        if (v === 'publicKey' && typeof transaction[v] === 'string') {
+            transaction[v] = PublicKey.fromString(transaction[v]);
+        }
+        if (v === 'blockHash') {
+            transaction[v] = base_decode(transaction[v]);
+        }
+
+        if (v === 'actions') {
+            for (const action of transaction[v]) {
+                const [k2] = Object.entries(action)[0];
+                Object.entries(core2jsActions).forEach(([k, v]) => {
+                    if (k !== k2) return;
+                    action[v] = action[k];
+                    delete action[k];
+                    if (v === 'addKey') {
+                        action[v] = {
+                            publicKey: PublicKey.fromString(
+                                action[v].public_key,
+                            ),
+                            accessKey: {
+                                nonce: 0,
+                                permission: {
+                                    fullAccess: {},
+                                },
+                            },
+                        };
+                    }
+                });
+            }
+        }
+    });
+    return transaction;
 };
