@@ -3,8 +3,9 @@ import * as nearAPI from 'near-api-js';
 import { sha256, KeyPairSecp256k1 } from 'noble-hashes/lib/sha256';
 let elliptic = require('elliptic');
 let ec = new elliptic.ec('secp256k1');
+import { base_encode, base_decode } from 'near-api-js/lib/utils/serialize';
 
-const { KeyPair } = nearAPI;
+const { PublicKey } = nearAPI.utils;
 import {
     broadcast,
     call,
@@ -142,6 +143,8 @@ const AppComp = ({ state, update }) => {
                                     serializedTxHash,
                                 );
 
+                                // ECDSA pubKeyRecovered
+
                                 let pubKeyRecovered = ec.recoverPubKey(
                                     serializedTxHash,
                                     {
@@ -161,24 +164,69 @@ const AppComp = ({ state, update }) => {
                                     pubKeyRecovered.encode('hex'),
                                 );
 
+                                // ECDSA SIG VERIFY
+
+                                var ecKey = ec.keyFromPublic(
+                                    pubKeyRecovered.encode('hex'),
+                                    'hex',
+                                );
+
+                                console.log(
+                                    'verified signature',
+                                    ecKey.verify(serializedTxHash, {
+                                        r: Buffer.from(
+                                            sigRes.big_r.affine_point.substring(
+                                                2,
+                                            ),
+                                            'hex',
+                                        ),
+                                        s: Buffer.from(sigRes.s.scalar, 'hex'),
+                                    }),
+                                );
+
+                                // End of verification tests
+
+                                const publicKey = PublicKey.fromString(
+                                    'secp256k1:' +
+                                        base_encode(
+                                            Buffer.from(
+                                                pubKeyRecovered
+                                                    .encode('hex')
+                                                    .substring(2),
+                                                'hex',
+                                            ),
+                                        ),
+                                );
+
+                                const signature =
+                                    new nearAPI.transactions.Signature({
+                                        keyType: 1,
+                                        data: Buffer.concat([
+                                            Buffer.from(
+                                                sigRes.big_r.affine_point.substring(
+                                                    2,
+                                                ),
+                                                'hex',
+                                            ),
+                                            Buffer.from(sigRes.s.scalar, 'hex'),
+                                            Buffer.from(
+                                                sigRes.big_r.affine_point.substring(
+                                                    0,
+                                                    2,
+                                                ),
+                                                'hex',
+                                            ),
+                                        ]),
+                                    });
+
+                                // TODO ISSUE IN NAJ? Calling .subarray on signature type not signature.data
+                                //publicKey.verify(serializedTx, signature);
+                                // console.log('verified', verified);
+
                                 const signedTransaction =
                                     new nearAPI.transactions.SignedTransaction({
                                         transaction,
-                                        signature:
-                                            new nearAPI.transactions.Signature({
-                                                keyType: 1,
-                                                data: Buffer.concat([
-                                                    Buffer.from(
-                                                        sigRes.big_r
-                                                            .affine_point,
-                                                        'hex',
-                                                    ),
-                                                    Buffer.from(
-                                                        sigRes.s.scalar,
-                                                        'hex',
-                                                    ),
-                                                ]),
-                                            }),
+                                        signature,
                                     });
 
                                 console.log(signedTransaction);
