@@ -1,11 +1,9 @@
 use external::{mpc_contract, SignRequest};
 use hex::decode;
-use near_sdk::borsh::{self, BorshSerialize};
+use near_sdk::borsh::{self};
 use near_sdk::env::sha256;
-use near_sdk::json_types::U128;
 use near_sdk::serde_json::{from_str, Value};
 use near_sdk::{env, log, near, require, AccountId, Gas, NearToken, Promise};
-use parse::vec_to_fixed;
 use std::str::Chars;
 
 const MPC_CONTRACT_ACCOUNT_ID: &str = "v1.signer-dev.testnet";

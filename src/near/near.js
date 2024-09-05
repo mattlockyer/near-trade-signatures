@@ -104,6 +104,7 @@ const core2jsKeys = {
 };
 const core2jsActions = {
     AddKey: 'addKey',
+    DeleteKey: 'deleteKey',
     Transfer: 'transfer',
 };
 export const core2jsTransaction = async (transaction) => {
@@ -136,6 +137,13 @@ export const core2jsTransaction = async (transaction) => {
                                     fullAccess: {},
                                 },
                             },
+                        };
+                    }
+                    if (v === 'deleteKey') {
+                        action[v] = {
+                            publicKey: PublicKey.fromString(
+                                action[v].public_key,
+                            ),
                         };
                     }
                 });

@@ -1,7 +1,6 @@
 use crate::*;
-use near_sdk::serde::Deserialize;
 use omni_transaction::near::near_transaction::NearTransaction;
-use omni_transaction::near::types::PublicKey;
+use omni_transaction::near::types::BlockHash;
 
 pub fn get_chars(str: &str) -> Chars {
     let first = str[0..1].to_owned();
@@ -37,11 +36,11 @@ pub fn get_transactions(data: &Value) -> Vec<NearTransaction> {
             receiver_id: get_string(&jtx["receiver_id"])
                 .parse::<AccountId>()
                 .unwrap(),
-            block_hash: vec_to_fixed(
+            block_hash: BlockHash::from(vec_to_fixed(
                 bs58::decode(&get_string(&jtx["block_hash"]))
                     .into_vec()
                     .unwrap(),
-            ),
+            )),
             actions: vec![],
         };
 
@@ -66,22 +65,22 @@ fn test_get_transactions() {
 {
     "transactions":[
         {
-            "signer_id":
-                "86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381",
+            "signer_id": "86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381",
             "public_key": "ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52",
             "nonce": 172237399000001,
-            "receiver_id": "forgetful-parent.testnet",
+            "receiver_id": "86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381",
             "block_hash": "4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ",
-            "actions":[
+            "actions": [
                 { "Transfer": { "deposit": 1 } },
                 {
                     "AddKey": {
-                        "public_key":
-                            "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp",
-                        "access_key": {
-                            "nonce": 0,
-                            "permission": "FullAccess"
-                        }
+                        "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp",
+                        "access_key": { "nonce": 0, "permission": "FullAccess" }
+                    }
+                },
+                {
+                    "DeleteKey": {
+                        "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp"
                     }
                 }
             ]

@@ -1095,13 +1095,14 @@ dependencies = [
 [[package]]
 name = "omni-transaction"
 version = "0.1.0"
-source = "git+https://github.com/edsonalcala/omni-transaction-rs.git?branch=fix-serializing-issues#8e99cb292aed77b38ce3b01b63293d2180e4d176"
+source = "git+https://github.com/edsonalcala/omni-transaction-rs.git?branch=development#b9b79a6599bbebc089784e0591a91c5abff46009"
 dependencies = [
  "borsh",
  "bs58 0.5.1",
  "hex",
  "near-sdk",
  "rlp",
+ "serde",
  "serde-big-array",
 ]
 
