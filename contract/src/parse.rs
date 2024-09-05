@@ -31,7 +31,7 @@ pub fn get_transactions(data: &Value) -> Vec<NearTransaction> {
     for jtx in json_transactions.iter() {
         let mut transaction = NearTransaction {
             signer_id: get_string(&jtx["signer_id"]).parse::<AccountId>().unwrap(),
-            signer_public_key: from_str(&jtx["public_key"].to_string()).unwrap(),
+            signer_public_key: from_str(&jtx["signer_public_key"].to_string()).unwrap(),
             nonce: jtx["nonce"].as_u64().unwrap(),
             receiver_id: get_string(&jtx["receiver_id"])
                 .parse::<AccountId>()
@@ -66,7 +66,7 @@ fn test_get_transactions() {
     "transactions":[
         {
             "signer_id": "86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381",
-            "public_key": "ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52",
+            "signer_public_key": "ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52",
             "nonce": 172237399000001,
             "receiver_id": "86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381",
             "block_hash": "4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ",

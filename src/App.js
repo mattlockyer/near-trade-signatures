@@ -26,7 +26,8 @@ const defaultMsg = {
         {
             signer_id:
                 '86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381',
-            public_key: 'ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52',
+            signer_public_key:
+                'ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52',
             nonce: 172237399000001,
             receiver_id:
                 '86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381',
@@ -292,7 +293,8 @@ const AppComp = ({ state, update }) => {
                             // update default message to sign with the latest information
                             const msg = JSON.parse(JSON.stringify(defaultMsg));
                             msg.transactions[0].signer_id = accountId;
-                            msg.transactions[0].public_key = nearSecpPublicKey;
+                            msg.transactions[0].signer_public_key =
+                                nearSecpPublicKey;
                             // WARNING nonce must be below Number.MAX_SAFE_INTEGER
                             msg.transactions[0].nonce = Number(
                                 nonce + BigInt(1),

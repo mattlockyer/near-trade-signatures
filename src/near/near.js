@@ -96,7 +96,7 @@ const { base_decode } = nearAPI.utils.serialize;
 
 const core2jsKeys = {
     signer_id: 'signerId',
-    public_key: 'publicKey',
+    signer_public_key: 'publicKey',
     receiver_id: 'receiverId',
     nonce: 'nonce',
     block_hash: 'blockHash',
