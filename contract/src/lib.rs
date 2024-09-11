@@ -36,15 +36,7 @@ impl Contract {
             let encoded =
                 borsh::to_vec(&transaction).expect("failed to serialize NEAR transaction");
 
-            log!("encoded");
-            log!("{:?}", encoded.clone());
-
             let payload = sha256(&encoded);
-
-            log!("payload");
-            log!("{:?}", payload);
-            log!("path");
-            log!("{:?}", pk.clone());
 
             // mpc sign call args
             let request = SignRequest {

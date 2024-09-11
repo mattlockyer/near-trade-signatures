@@ -29,30 +29,7 @@ pub fn get_transactions(data: &Value) -> Vec<NearTransaction> {
     let json_transactions: Vec<Value> = data.as_array().unwrap().to_vec();
 
     for jtx in json_transactions.iter() {
-        let mut transaction = NearTransaction {
-            signer_id: get_string(&jtx["signer_id"]).parse::<AccountId>().unwrap(),
-            signer_public_key: from_str(&jtx["signer_public_key"].to_string()).unwrap(),
-            nonce: jtx["nonce"].as_u64().unwrap(),
-            receiver_id: get_string(&jtx["receiver_id"])
-                .parse::<AccountId>()
-                .unwrap(),
-            block_hash: BlockHash::from(vec_to_fixed(
-                bs58::decode(&get_string(&jtx["block_hash"]))
-                    .into_vec()
-                    .unwrap(),
-            )),
-            actions: vec![],
-        };
-
-        let json_actions: Vec<Value> = jtx["actions"].as_array().unwrap().to_vec();
-
-        // TODO test multiple actions per promise. With mut promise?
-        for json_action in json_actions.iter() {
-            transaction
-                .actions
-                .push(from_str(&json_action.to_string()).unwrap())
-        }
-
+        let transaction = NearTransaction::from_json(&jtx.to_string()).unwrap();
         transactions.push(transaction);
     }
 
@@ -63,19 +40,26 @@ pub fn get_transactions(data: &Value) -> Vec<NearTransaction> {
 fn test_get_transactions() {
     let data = r#"
 {
-    "transactions":[
+    "transactions": [
         {
             "signer_id": "86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381",
-            "signer_public_key": "ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52",
-            "nonce": 172237399000001,
+            "signer_public_key": "secp256k1:3uB7912GMVBytHZQcvCsExHxbTv7BrBrg9rL73DB4ZDJUT4Lz4BMxytkV8maHxchRjsH3qXEuKATwEmz1pU4QTAa",
+            "nonce": 174012292000001,
             "receiver_id": "86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381",
-            "block_hash": "4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ",
+            "block_hash": "2dh1xGb9zS5peb18QuzCYKgrptW1WjX5oS519dxb4L3a",
             "actions": [
-                { "Transfer": { "deposit": 1 } },
+                {
+                    "Transfer": {
+                        "deposit": "100000000000000000000000"
+                    }
+                },
                 {
                     "AddKey": {
                         "public_key": "ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp",
-                        "access_key": { "nonce": 0, "permission": "FullAccess" }
+                        "access_key": {
+                            "nonce": "0",
+                            "permission": "FullAccess"
+                        }
                     }
                 },
                 {

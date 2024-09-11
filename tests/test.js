@@ -5,7 +5,11 @@ import * as nearAPI from 'near-api-js';
 const { Near, Account, KeyPair, keyStores } = nearAPI;
 
 // near config for all tests
-const { accountId, secretKey, contractId } = process.env;
+const {
+    REACT_APP_accountId: accountId,
+    REACT_APP_secretKey: secretKey,
+    REACT_APP_contractId: contractId,
+} = process.env;
 const networkId = 'testnet';
 const keyPair = KeyPair.fromString(secretKey);
 const keyStore = new keyStores.InMemoryKeyStore();

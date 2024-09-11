@@ -1,12 +1,13 @@
 import * as nearAPI from 'near-api-js';
 const { Near, Account, KeyPair, keyStores } = nearAPI;
+import { base_encode, base_decode } from 'near-api-js/lib/utils/serialize';
 
-const { REACT_APP_secretKey, REACT_APP_accountId, REACT_APP_contractId } =
-    process.env;
-
-const secretKey = REACT_APP_secretKey;
-const accountId = REACT_APP_accountId;
-const contractId = REACT_APP_contractId;
+const {
+    REACT_APP_accountId: accountId,
+    REACT_APP_secretKey: secretKey,
+    REACT_APP_contractId: contractId,
+    REACT_APP_mpcContractId: mpcContractId,
+} = process.env;
 
 const networkId = 'testnet';
 const keyPair = KeyPair.fromString(secretKey);
@@ -44,7 +45,7 @@ export const getKeys = async ({ accountId }) => {
 export const mpcPublicKey = async () => {
     const account = new Account(near.connection, accountId);
     const res = await account.viewFunction({
-        contractId: 'v1.signer-dev.testnet',
+        contractId: mpcContractId,
         methodName: 'public_key',
         args: {},
     });
@@ -72,14 +73,24 @@ export const call = async ({ pk, msg, sig }) => {
     return res;
 };
 
-export const buildTransactions = async ({ msg, sig }) => {
+export const deleteAccount = async ({ accountId: newAccountId, secretKey }) => {
+    const keyPair = KeyPair.fromString(secretKey);
+    keyStore.setKey(networkId, newAccountId, keyPair);
+    const account = new Account(near.connection, newAccountId);
+    await account.deleteAccount(accountId);
+};
+
+export const createAccountWithSecpKey = async ({
+    accountId: newAccountId,
+    secretKey,
+    keyToAdd,
+}) => {
     const account = new Account(near.connection, accountId);
-    const res = await account.viewFunction({
-        contractId,
-        methodName: 'build_transactions',
-        args: { msg, sig },
-    });
-    return res;
+    await account.sendMoney(newAccountId, BigInt('5000000000000000000000000'));
+    const keyPair = KeyPair.fromString(secretKey);
+    keyStore.setKey(networkId, newAccountId, keyPair);
+    const newAccount = new Account(near.connection, newAccountId);
+    await newAccount.addKey(keyToAdd);
 };
 
 export const broadcast = async (signedSerializedTx) => {
@@ -89,12 +100,81 @@ export const broadcast = async (signedSerializedTx) => {
     return res;
 };
 
+// convert low level NEAR TX to JSON that contract can deserialized to near-primitives
+
+const js2coreFields = {
+    signerId: 'signer_id',
+    publicKey: 'signer_public_key',
+    receiverId: 'receiver_id',
+    nonce: 'nonce',
+    blockHash: 'block_hash',
+    actions: 'actions',
+};
+const js2coreActions = {
+    addKey: 'AddKey',
+    deleteKey: 'DeleteKey',
+    transfer: 'Transfer',
+};
+export const js2core = (oldTx) => {
+    const tx = {};
+    Object.entries(js2coreFields).forEach(([k, v]) => {
+        tx[v] = oldTx[k];
+        if (v !== k) delete tx[k];
+        // turn JS objects into strings
+        if (v === 'signer_public_key' && typeof tx[v] !== 'string') {
+            tx[v] = tx[v].toString();
+        }
+        if (v === 'block_hash') {
+            tx[v] = base_encode(tx[v]);
+        }
+        if (v === 'nonce') {
+            tx[v] = tx[v].toString();
+        }
+        if (v === 'actions') {
+            tx[v] = [];
+            for (const oldAction of oldTx[v]) {
+                const [k2] = Object.entries(oldAction)[0];
+                Object.entries(js2coreActions).forEach(([k, v]) => {
+                    if (k !== k2) return;
+                    switch (v) {
+                        case 'AddKey':
+                            tx.actions.push({
+                                [v]: {
+                                    public_key:
+                                        oldAction[k].publicKey.toString(),
+                                    access_key: {
+                                        nonce: '0',
+                                        permission: 'FullAccess',
+                                    },
+                                },
+                            });
+                            break;
+                        case 'DeleteKey':
+                            tx.actions.push({
+                                [v]: {
+                                    public_key:
+                                        oldAction[k].publicKey.toString(),
+                                },
+                            });
+                            break;
+                        default:
+                            tx.actions.push({
+                                [v]: JSON.parse(JSON.stringify(oldAction[k])),
+                            });
+                    }
+                });
+            }
+        }
+    });
+    return tx;
+};
+
 // transaction fix for JSON for contracts, to JS
 
 const { PublicKey } = nearAPI.utils;
 const { base_decode } = nearAPI.utils.serialize;
 
-const core2jsKeys = {
+const core2jsFields = {
     signer_id: 'signerId',
     signer_public_key: 'publicKey',
     receiver_id: 'receiverId',
@@ -107,8 +187,8 @@ const core2jsActions = {
     DeleteKey: 'deleteKey',
     Transfer: 'transfer',
 };
-export const core2jsTransaction = async (transaction) => {
-    Object.entries(core2jsKeys).forEach(([k, v]) => {
+export const core2js = (transaction) => {
+    Object.entries(core2jsFields).forEach(([k, v]) => {
         transaction[v] = transaction[k];
         if (v !== k) delete transaction[k];
         // pre-serialize types from json

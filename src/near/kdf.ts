@@ -108,7 +108,7 @@ function uncompressedHexPointToEvmAddress(uncompressedHexPoint) {
 }
 
 async function uncompressedHexPointToNearImplicit(uncompressedHexPoint) {
-    console.log('uncompressedHexPoint', uncompressedHexPoint);
+    // console.log('uncompressedHexPoint', uncompressedHexPoint);
 
     const implicitSecpPublicKey =
         'secp256k1:' +
@@ -118,9 +118,8 @@ async function uncompressedHexPointToNearImplicit(uncompressedHexPoint) {
         'SHA-256',
         Buffer.from(uncompressedHexPoint, 'hex'),
     );
-    const { publicKey, secretKey } = generateSeedPhrase(
-        Buffer.from(sha256HashOutput),
-    );
+    const { publicKey, secretKey: implicitAccountSecretKey } =
+        generateSeedPhrase(Buffer.from(sha256HashOutput));
 
     // DEBUG
     // console.log(secretKey);
@@ -136,13 +135,17 @@ async function uncompressedHexPointToNearImplicit(uncompressedHexPoint) {
     //     publicKey: implicitSecpPublicKey,
     // });
 
-    return { implicitAccountId, implicitSecpPublicKey };
+    return {
+        implicitAccountId,
+        implicitSecpPublicKey,
+        implicitAccountSecretKey,
+    };
 }
 
 export async function generateAddress({ publicKey, accountId, path, chain }) {
-    console.log('publicKey', publicKey);
-    console.log('accountId', accountId);
-    console.log('path', path);
+    // console.log('publicKey', publicKey);
+    // console.log('accountId', accountId);
+    // console.log('path', path);
 
     let childPublicKey = await deriveChildPublicKey(
         najPublicKeyStrToUncompressedHexPoint(publicKey),
@@ -150,8 +153,7 @@ export async function generateAddress({ publicKey, accountId, path, chain }) {
         path,
     );
     if (!chain) chain = 'ethereum';
-    let address;
-    let nearSecpPublicKey;
+    let address, nearSecpPublicKey, nearImplicitSecretKey;
     switch (chain) {
         case 'ethereum':
             address = uncompressedHexPointToEvmAddress(childPublicKey);
@@ -177,10 +179,14 @@ export async function generateAddress({ publicKey, accountId, path, chain }) {
             );
             break;
         case 'near':
-            const { implicitAccountId, implicitSecpPublicKey } =
-                await uncompressedHexPointToNearImplicit(childPublicKey);
+            const {
+                implicitAccountId,
+                implicitSecpPublicKey,
+                implicitAccountSecretKey,
+            } = await uncompressedHexPointToNearImplicit(childPublicKey);
             address = implicitAccountId;
             nearSecpPublicKey = implicitSecpPublicKey;
+            nearImplicitSecretKey = implicitAccountSecretKey;
             break;
     }
 
@@ -188,5 +194,6 @@ export async function generateAddress({ publicKey, accountId, path, chain }) {
         address,
         publicKey: childPublicKey,
         nearSecpPublicKey,
+        nearImplicitSecretKey,
     };
 }

@@ -5,19 +5,21 @@ const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"Bitcoin Signed Message:\n";
 
 pub fn require_btc_owner(pk: &str, msg: &str, sig: &str) {
     let recovered_pk = recover_pk(msg, sig);
-    // println!("recovered_pk {:?}", recovered_pk); // recovered_pk [229, 6, 179, 110, ...
     let pk_bytes = decode(pk).unwrap();
     require!(
         pk_bytes == recovered_pk,
         "public key != recovered public key from msg hash and signature"
     );
 }
-// ecrecover stuff
+// ecrecover
 fn recover_pk(msg: &str, sig: &str) -> Vec<u8> {
     // compose the message to be signed and hash it
     let mut msg_bytes: Vec<u8> = vec![];
+    // this prefix is valid for OKX Wallet
+    // WARNING: I HAVE SEEN DIFFERENT HEADERS!!!
     msg_bytes.push(BITCOIN_SIGNED_MSG_PREFIX.len() as u8);
     msg_bytes.append(&mut BITCOIN_SIGNED_MSG_PREFIX.to_vec());
+    // https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer
     let msg_len = msg.len();
     if msg_len < 253 {
         msg_bytes.push(msg_len as u8);
@@ -31,6 +33,7 @@ fn recover_pk(msg: &str, sig: &str) -> Vec<u8> {
         msg_bytes.push(255);
         msg_bytes.append(&mut (msg_len as u64).to_le_bytes().to_vec());
     }
+    // append the msg and double sha256 hash it
     msg_bytes.append(&mut msg.as_bytes().to_vec());
     let hash = env::sha256(&msg_bytes);
     let msg_hash = env::sha256(&hash);
@@ -40,7 +43,7 @@ fn recover_pk(msg: &str, sig: &str) -> Vec<u8> {
     let sig = sig_bytes.as_slice()[1..].to_vec();
     let v = sig_bytes.as_slice()[0] - 31;
 
-    // recover the public key using ecdsa ecrecover
+    // recover the public key using NEAR Protocol ecdsa ecrecover method
     let mut recovered_pk = env::ecrecover(&msg_hash, &sig, v, true).unwrap().to_vec();
     recovered_pk.truncate(32);
     recovered_pk
