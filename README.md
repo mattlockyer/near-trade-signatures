@@ -18,6 +18,12 @@
 
 # Create `.env` file in root of project
 
+You will need your own NEAR dev account so you can fill in the env vars: `YOUR_NEAR_DEV_ACCOUNT_ID` and `YOUR_NEAR_DEV_ACCOUNT_SECRET_KEY`.
+
+The easiest way to do this is by installing `cargo near` and using the command `cargo near create-dev-account`.
+
+[Cargo Near](https://github.com/near/cargo-near)
+
 ```
 REACT_APP_mpcContractId=v1.signer-dev.testnet
 REACT_APP_contractId=forgetful-parent.testnet
