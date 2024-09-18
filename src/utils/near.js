@@ -1,12 +1,18 @@
 import * as nearAPI from 'near-api-js';
 const { Near, Account, KeyPair, keyStores } = nearAPI;
 import { base_encode, base_decode } from 'near-api-js/lib/utils/serialize';
+import { sha256 } from 'noble-hashes/lib/sha256';
+let elliptic = require('elliptic');
+let ec = new elliptic.ec('secp256k1');
+import { generateAddress } from '../utils/kdf';
+import { sleep } from '../state/utils';
 
 const {
     REACT_APP_accountId: accountId,
     REACT_APP_secretKey: secretKey,
     REACT_APP_contractId: contractId,
     REACT_APP_mpcContractId: mpcContractId,
+    REACT_APP_mpcPublicKey: mpcPublicKey,
 } = process.env;
 
 const networkId = 'testnet';
@@ -23,6 +29,195 @@ const config = {
 };
 const near = new Near(config);
 const { provider } = near.connection;
+
+// these methods simplify the frontend logic for Bitcoin.js and Ethereum.js components
+
+// get or create the derived NEAR chain signatures account
+export const getNearAccount = async (path, updateOverlay) => {
+    const {
+        address: accountId,
+        nearSecpPublicKey,
+        nearImplicitSecretKey,
+    } = await generateAddress({
+        publicKey: mpcPublicKey,
+        accountId: contractId,
+        path,
+        chain: 'near',
+    });
+
+    console.log('implicit accountId', accountId);
+    console.log('nearSecpPublicKey', nearSecpPublicKey);
+
+    // DEBUGGING, to test createAccountWithSecpKey
+    // console.log('DELETING ACCOUNT', accountId);
+    // await deleteAccount({
+    //     accountId,
+    //     secretKey: nearImplicitSecretKey,
+    // });
+
+    // update default tx to sign with the latest information
+    let accessKeys = await getKeys({
+        accountId,
+    });
+    // console.log('accessKeys', accessKeys);
+    if (accessKeys.length === 0) {
+        updateOverlay({
+            overlayMessage: 'Creating NEAR Account',
+        });
+        await createAccountWithSecpKey({
+            accountId,
+            secretKey: nearImplicitSecretKey,
+            keyToAdd: nearSecpPublicKey,
+        });
+        updateOverlay({
+            overlayMessage: '',
+        });
+        accessKeys = await getKeys({
+            accountId,
+        });
+    }
+    const secpKey = accessKeys.find(
+        (k) => k.public_key.indexOf('secp256k1') === 0,
+    );
+    const { nonce } = secpKey.access_key;
+    const block_hash = await getBlockHash();
+
+    return {
+        nonce,
+        block_hash,
+        accountId,
+        nearSecpPublicKey,
+        nearImplicitSecretKey,
+    };
+};
+
+export const getNearSignature = async ({
+    methodName,
+    args,
+    updateOverlay,
+    jsonTx,
+}) => {
+    updateOverlay({
+        overlayMessage: 'Requesting NEAR Signature',
+    });
+
+    const res = await callContract(methodName, args);
+
+    updateOverlay({
+        overlayMessage:
+            'Received NEAR Signature. Broadcasting NEAR Transaction.',
+    });
+
+    const sigRes = JSON.parse(
+        Buffer.from(res.status.SuccessValue, 'base64').toString(),
+    );
+    console.log('sigRes', sigRes);
+
+    const transaction = await core2js(jsonTx);
+
+    const serializedTx = nearAPI.utils.serialize.serialize(
+        nearAPI.transactions.SCHEMA.Transaction,
+        transaction,
+    );
+    console.log('serializedTx', serializedTx);
+    const serializedTxHash = sha256(serializedTx);
+    console.log('serializedTxHash', serializedTxHash);
+
+    // ECDSA pubKeyRecovered
+
+    let pubKeyRecovered = ec.recoverPubKey(
+        serializedTxHash,
+        {
+            r: Buffer.from(sigRes.big_r.affine_point.substring(2), 'hex'),
+            s: Buffer.from(sigRes.s.scalar, 'hex'),
+        },
+        sigRes.recovery_id,
+        'hex',
+    );
+    console.log('pubKeyRecovered', pubKeyRecovered.encode('hex'));
+
+    // ECDSA SIG VERIFY
+
+    var ecKey = ec.keyFromPublic(pubKeyRecovered.encode('hex'), 'hex');
+
+    console.log(
+        'verified signature',
+        ecKey.verify(serializedTxHash, {
+            r: Buffer.from(sigRes.big_r.affine_point.substring(2), 'hex'),
+            s: Buffer.from(sigRes.s.scalar, 'hex'),
+        }),
+    );
+
+    // End of verification tests
+
+    const signature = new nearAPI.transactions.Signature({
+        keyType: 1,
+        data: Buffer.concat([
+            Buffer.from(sigRes.big_r.affine_point.substring(2), 'hex'),
+            Buffer.from(sigRes.s.scalar, 'hex'),
+            Buffer.from(sigRes.big_r.affine_point.substring(0, 2), 'hex'),
+        ]),
+    });
+
+    // WIP
+    // const publicKey = PublicKey.fromString(
+    //     'secp256k1:' +
+    //         base_encode(
+    //             Buffer.from(pubKeyRecovered.encode('hex').substring(2), 'hex'),
+    //         ),
+    // );
+    // publicKey.verify(serializedTx, signature);
+    // console.log('verified', verified);
+
+    const signedTransaction = new nearAPI.transactions.SignedTransaction({
+        transaction,
+        signature,
+    });
+
+    console.log(signedTransaction);
+    // encodes transaction to serialized Borsh (required for all transactions)
+    const signedSerializedTx = signedTransaction.encode();
+    // sends transaction to NEAR blockchain via JSON RPC call and records the result
+    const result = await broadcast(signedSerializedTx);
+
+    updateOverlay({
+        overlayMessage: 'NEAR Transaction Successful',
+    });
+    await sleep(1500);
+
+    console.log('result', result);
+
+    updateOverlay({
+        overlayMessage: (
+            <>
+                <a
+                    href={
+                        `https://testnet.nearblocks.io/txns/` +
+                        result.transaction.hash
+                    }
+                    target="_blank"
+                >
+                    Explorer Link
+                </a>
+                <br />
+                <br />
+                <button
+                    onClick={() =>
+                        updateOverlay({
+                            overlayMessage: '',
+                        })
+                    }
+                >
+                    Close
+                </button>
+            </>
+        ),
+    });
+};
+
+// end of frontend components
+
+// additional utils
 
 export const addKey = async ({ accountId, secretKey, publicKey }) => {
     const keyPair = KeyPair.fromString(secretKey);
@@ -42,7 +237,7 @@ export const getKeys = async ({ accountId }) => {
     return await account.getAccessKeys();
 };
 
-export const mpcPublicKey = async () => {
+export const getMpcPublicKey = async () => {
     const account = new Account(near.connection, accountId);
     const res = await account.viewFunction({
         contractId: mpcContractId,
@@ -62,12 +257,13 @@ export const view = async ({ pk, msg, sig }) => {
     console.log(res);
 };
 
-export const call = async ({ pk, msg, sig }) => {
+export const callContract = async (methodName, args) => {
+    console.log(methodName, args);
     const account = new Account(near.connection, accountId);
     const res = await account.functionCall({
         contractId,
-        methodName: 'test_call',
-        args: { pk, msg, sig },
+        methodName,
+        args,
         gas: BigInt('300000000000000'),
     });
     return res;

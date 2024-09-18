@@ -1,7 +1,10 @@
 export const initState = {
-    app: {
+    overlay: {},
+    app: {},
+    bitcoin: {
         step: 'connect',
-        address: 0,
-        publicKey: 0,
+    },
+    ethereum: {
+        step: 'connect',
     },
 };

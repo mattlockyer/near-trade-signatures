@@ -32,8 +32,10 @@
         "start": "parcel src/index.html --open"
     },
     "dependencies": {
+        "@metamask/detect-provider": "^2.0.0",
         "bs58check": "^4.0.0",
         "elliptic": "^6.5.7",
+        "ethers": "^6.13.2",
         "js-sha3": "^0.9.3",
         "keccak": "^3.0.4",
         "near-api-js": "^4.0.4",

@@ -3,7 +3,7 @@ use near_sdk::base64::prelude::*;
 
 const BITCOIN_SIGNED_MSG_PREFIX: &[u8] = b"Bitcoin Signed Message:\n";
 
-pub fn require_btc_owner(pk: &str, msg: &str, sig: &str) {
+pub fn require(pk: &str, msg: &str, sig: &str) {
     let recovered_pk = recover_pk(msg, sig);
     let pk_bytes = decode(pk).unwrap();
     require!(
@@ -11,30 +11,32 @@ pub fn require_btc_owner(pk: &str, msg: &str, sig: &str) {
         "public key != recovered public key from msg hash and signature"
     );
 }
-// ecrecover
+
+// msg arg is the NEAR TX to be encoded and signed by MPC
+// recreate the bitcoin msg that was signed in the wallet
+// tested: OKX Wallet
 fn recover_pk(msg: &str, sig: &str) -> Vec<u8> {
-    // compose the message to be signed and hash it
     let mut msg_bytes: Vec<u8> = vec![];
     // this prefix is valid for OKX Wallet
     // WARNING: I HAVE SEEN DIFFERENT HEADERS!!!
     msg_bytes.push(BITCOIN_SIGNED_MSG_PREFIX.len() as u8);
-    msg_bytes.append(&mut BITCOIN_SIGNED_MSG_PREFIX.to_vec());
+    msg_bytes.extend_from_slice(&BITCOIN_SIGNED_MSG_PREFIX.to_vec());
     // https://en.bitcoin.it/wiki/Protocol_documentation#Variable_length_integer
     let msg_len = msg.len();
     if msg_len < 253 {
         msg_bytes.push(msg_len as u8);
     } else if msg_len < u16::max_value() as usize {
         msg_bytes.push(253);
-        msg_bytes.append(&mut (msg_len as u16).to_le_bytes().to_vec());
+        msg_bytes.extend_from_slice(&(msg_len as u16).to_le_bytes().to_vec());
     } else if msg_len < u32::max_value() as usize {
         msg_bytes.push(254);
-        msg_bytes.append(&mut (msg_len as u32).to_le_bytes().to_vec());
+        msg_bytes.extend_from_slice(&(msg_len as u32).to_le_bytes().to_vec());
     } else if msg_len < u64::max_value() as usize {
         msg_bytes.push(255);
-        msg_bytes.append(&mut (msg_len as u64).to_le_bytes().to_vec());
+        msg_bytes.extend_from_slice(&(msg_len as u64).to_le_bytes().to_vec());
     }
     // append the msg and double sha256 hash it
-    msg_bytes.append(&mut msg.as_bytes().to_vec());
+    msg_bytes.extend_from_slice(&msg.as_bytes().to_vec());
     let hash = env::sha256(&msg_bytes);
     let msg_hash = env::sha256(&hash);
 
@@ -55,5 +57,5 @@ fn test_owner() {
     let msg: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec nec volutpat orci. Duis viverra tortor sed mi venenatis sagittis. Quisque ultricies ex sed odio malesuada, a viverra tortor volutpat. Suspendisse et risus et tellus fermentum sollicitudin duis.";
     let sig: &str =
         "HzKPDWLnjzitKPbmYKMRCdNZQwjuVJJTIsMzJrhy5fleQHbtfTKQGH/tMaoe1nXwEfMXiJV6WnpafFsUX0ftZ4k=";
-    require_btc_owner(pk, msg, sig);
+    require(pk, msg, sig);
 }

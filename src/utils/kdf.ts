@@ -108,7 +108,7 @@ function uncompressedHexPointToEvmAddress(uncompressedHexPoint) {
 }
 
 async function uncompressedHexPointToNearImplicit(uncompressedHexPoint) {
-    // console.log('uncompressedHexPoint', uncompressedHexPoint);
+    console.log('uncompressedHexPoint', uncompressedHexPoint);
 
     const implicitSecpPublicKey =
         'secp256k1:' +
@@ -152,6 +152,7 @@ export async function generateAddress({ publicKey, accountId, path, chain }) {
         accountId,
         path,
     );
+
     if (!chain) chain = 'ethereum';
     let address, nearSecpPublicKey, nearImplicitSecretKey;
     switch (chain) {

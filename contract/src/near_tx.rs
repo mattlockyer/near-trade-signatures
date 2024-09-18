@@ -1,39 +1,54 @@
 use crate::*;
+use external::{mpc_contract, SignRequest};
+use near_sdk::borsh::{self};
+use near_sdk::env::sha256;
+use near_sdk::serde_json::{from_str, Value};
+use near_sdk::{env, Gas, NearToken, Promise};
+
+const MPC_CONTRACT_ACCOUNT_ID: &str = "v1.signer-dev.testnet";
+const ONE_YOCTO: NearToken = NearToken::from_yoctonear(1);
+const GAS: Gas = Gas::from_tgas(250);
+
 use omni_transaction::near::near_transaction::NearTransaction;
-use omni_transaction::near::types::BlockHash;
-
-pub fn get_chars(str: &str) -> Chars {
-    let first = str[0..1].to_owned();
-    let mut chars = str.chars();
-    // client side json escapes double quotes
-    if first == "\"" {
-        chars.next();
-        chars.next_back();
-    }
-    chars
-}
-
-pub fn get_string(value: &Value) -> String {
-    let str: String = value.to_string();
-    let chars = get_chars(&str);
-    chars.as_str().to_string()
-}
-
-pub fn vec_to_fixed<T, const N: usize>(v: Vec<T>) -> [T; N] {
-    v.try_into()
-        .unwrap_or_else(|v: Vec<T>| panic!("Expected a Vec of length {} but it was {}", N, v.len()))
-}
 
 pub fn get_transactions(data: &Value) -> Vec<NearTransaction> {
     let mut transactions: Vec<NearTransaction> = vec![];
+    // turns serde Value (JSON of NEAR transaction array) into a Vec<Value>
     let json_transactions: Vec<Value> = data.as_array().unwrap().to_vec();
-
+    // loop over each serde Value in the array and use Omni library to parse the transaction JSON into a NearTransaction
     for jtx in json_transactions.iter() {
         let transaction = NearTransaction::from_json(&jtx.to_string()).unwrap();
         transactions.push(transaction);
     }
-
     transactions
+}
+
+pub fn get_near_sig(path: String, msg: String) -> Promise {
+    let data_value: Value = from_str(&msg).unwrap();
+    let transactions = get_transactions(&data_value["transactions"]);
+    let mut promise = Promise::new(env::current_account_id());
+
+    // loop over NearTransactions, encode, hash and call the NEAR MPC contract to get a signature for each hash
+    for transaction in transactions {
+        let encoded = borsh::to_vec(&transaction).expect("failed to serialize NEAR transaction");
+        let payload = sha256(&encoded);
+        // mpc sign call args
+        let request = SignRequest {
+            payload: utils::vec_to_fixed(payload),
+            path: path.to_owned(),
+            key_version: 0,
+        };
+        // batch promises with .and
+        let next_promise = mpc_contract::ext(MPC_CONTRACT_ACCOUNT_ID.parse().unwrap())
+            .with_static_gas(GAS)
+            .with_attached_deposit(ONE_YOCTO)
+            .sign(request);
+
+        // combine the promises (executed in parallel)
+        promise = promise.then(next_promise);
+    }
+
+    promise
 }
 
 #[test]
@@ -84,18 +99,4 @@ fn test_get_transactions() {
         log!("{:?}", encoded.clone());
         log!("tx_hash: {:?}", tx_hash);
     }
-}
-
-#[test]
-fn test_parse() {
-    let sig = r#"
-    {"big_r":{"affine_point":"0282EF82B8EE5BA52EC356F7BBEE935B70A67D635F7F8D887FFDC70D2D943088FC"},"s":{"scalar":"6062C50A8A7806284A0C3886E53BA9F2DB23693912F3127ED902020923DD4A8E"},"recovery_id":1}
-    "#;
-    let sig_value: Value = from_str(&sig).unwrap();
-    let big_r: String = parse::get_string(&sig_value["big_r"]["affine_point"]);
-    log!("big_r: {:?}", big_r);
-    let s: String = parse::get_string(&sig_value["s"]["scalar"]);
-    log!("s: {:?}", s);
-    let recovery_id: u8 = sig_value["recovery_id"].as_u64().unwrap() as u8;
-    log!("recovery_id: {:?}", recovery_id);
 }

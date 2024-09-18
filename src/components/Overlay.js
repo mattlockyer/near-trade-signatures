@@ -26,4 +26,4 @@ const OverlayComp = ({ state, update }) => {
     );
 };
 
-export const Overlay = wrap(OverlayComp, ['app']);
+export const Overlay = wrap(OverlayComp, ['overlay']);

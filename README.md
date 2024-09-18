@@ -4,13 +4,14 @@
 
 # Overview
 
-1. Use a Bitcoin Wallet (OKX Wallet) to sign an unsigned transaction (UTX) of another chain (NEAR implemented for now).
+1. Use a Bitcoin Wallet (OKX Wallet) or an Ethereum Wallet (MM, OKX) to sign an unsigned transaction (UTX) of another chain (currently only NEAR).
+1. The public key (or Ethereum address) is used as a NEAR Chain Signatures `path` offset to create a derived ECDSA public key and account (DA).
+1. The DA is automatically created, funded and the necessary ECDSA signing key (secp256k1) is added to the account
 1. The signature and UTX are sent to the NEAR contract (NC).
-1. The NC verifies the signature and a recovered public key (RPK).
-1. The RPK is used as a NEAR Chain Signatures `path` offset to create a derived ECDSA public key and account (DA).
+1. The NC verifies the signature and matches a recoved public key to the client provided public key (or Ethereum address).
 1. The NC makes a cross contract call to the NEAR Chain Signatures contract to sign the hash of the UTX for the DA.
-1. The signature is returned to the client.
-1. The UTX can now be broadcast to the chain with a signature.
+1. The ECDSA signature is returned to the client.
+1. The UTX can now be broadcast to the chain with the ECDSA signature.
 
 # Installation
 
@@ -40,55 +41,10 @@ REACT_APP_secretKey=[YOUR_NEAR_DEV_ACCOUNT_SECRET_KEY]
 1. Next you will see a TX payload, this is a sample NEAR transaction.
 1. When you click sign, the same text will appear in your OKX Wallet extension. Sign this message.
 
-# Unpacking the Contract
+# The NEAR Contract
 
-```rust
-pub fn test_call(&mut self, pk: String, msg: String, sig: String) -> Promise {
-	owner::require_btc_owner(&pk, &msg, &sig);
-```
+Please see the Near contract for detailed comments.
 
-We have a method called `test_call` that returns a NEAR Promise.
+### `near_tx.rs`
 
-The first line in this method calls `owner::require_btc_owner(&pk, &msg, &sig);`. To see code, open `contract/owner.rs` (commented).
-
-```rust
-	let data_value: Value = from_str(&msg).unwrap();
-	let transactions = parse::get_transactions(&data_value["transactions"]);
-	let mut promise = Promise::new(env::current_account_id());
-```
-
-Next, the contract will parse the JSON into an array of NearTransaction objects.
-
-```rust
-	for transaction in transactions {
-		let encoded =
-			borsh::to_vec(&transaction).expect("failed to serialize NEAR transaction");
-
-		let payload = sha256(&encoded);
-
-		// mpc sign call args
-		let request = SignRequest {
-			payload: parse::vec_to_fixed(payload),
-			path: pk.clone(),
-			key_version: 0,
-		};
-		// batch promises with .and
-		let next_promise = mpc_contract::ext(MPC_CONTRACT_ACCOUNT_ID.parse().unwrap())
-			.with_static_gas(GAS)
-			.with_attached_deposit(ONE_YOCTO)
-			.sign(request);
-```
-
-Finally, we loop through each transaction, get the encoded payload, hash this payload and request a signature from the NEAR Chain Signatures MPC contract.
-
-```rust
-		promise = promise.then(next_promise);
-	}
-
-	promise
-}
-```
-
-This cross contract call returns a Promise. We chain this Promise to the previous Promise and finally return the whole Promise chain.
-
-**NOTE:** currently you can only call the NEAR Chain Signatures MPC contract once because the minimum gas for this call is 250 Tgas, out of a total NEAR TX gas limit of 300 Tgas.
+`get_near_sig` method calls the NEAR MPC contract and returns a Promise for each encoded and hashed NearTransaction. We chain this Promise to the previous Promise and finally return the whole Promise chain.

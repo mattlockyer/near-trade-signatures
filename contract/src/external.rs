@@ -7,7 +7,7 @@ pub struct SignRequest {
     pub path: String,
     pub key_version: u32,
 }
-
+#[allow(dead_code)]
 #[ext_contract(mpc_contract)]
 trait MPCContract {
     fn sign(&self, request: SignRequest);
