@@ -1,7 +1,76 @@
 import * as ethers from 'ethers';
 import detectEthereumProvider from '@metamask/detect-provider';
+import { generateAddress } from '../utils/kdf';
 
-/// ethereum
+const {
+    REACT_APP_contractId: contractId,
+    REACT_APP_mpcPublicKey: mpcPublicKey,
+} = process.env;
+
+export const defaultEvmTx = {
+    to: '0x525521d79134822a342d330bd91DA67976569aF1',
+    nonce: 1,
+    value: '0x038d7ea4c68000',
+    gasLimit: 21000,
+    gasPrice: 51354867146,
+    chainId: 11155111,
+};
+
+// const baseTx = {
+//     to: '0x525521d79134822a342d330bd91DA67976569aF1',
+//     nonce: 1,
+//     value: '0x038d7ea4c68000',
+//     gasLimit: 21000,
+//     gasPrice: 51354867146,
+//     chainId: 11155111,
+// };
+// const baseTx2 = {
+//     to: '0x525521d79134822a342d330bd91DA67976569aF1',
+//     nonce: 1,
+//     data: '0x6a627842000000000000000000000000525521d79134822a342d330bd91DA67976569aF1',
+//     value: '0',
+//     gasLimit: 21000,
+//     gasPrice: 51354867146,
+//     chainId: 11155111,
+// };
+// const baseTx3 = {
+//     type: 2,
+//     to: '0x525521d79134822a342d330bd91DA67976569aF1',
+//     nonce: 1,
+//     value: '0x038d7ea4c68000',
+//     maxPriorityFeePerGas: '0x1',
+//     maxFeePerGas: '0x1',
+//     gasLimit: 21000,
+//     chainId: 11155111,
+// };
+// const baseTx4 = {
+//     type: 2,
+//     to: '0x525521d79134822a342d330bd91DA67976569aF1',
+//     nonce: 1,
+//     data: '0x6a627842000000000000000000000000525521d79134822a342d330bd91DA67976569aF1',
+//     value: '0',
+//     maxPriorityFeePerGas: '0x1',
+//     maxFeePerGas: '0x1',
+//     gasLimit: 21000,
+//     chainId: 11155111,
+// };
+
+// chain signatures account
+
+export const getEthereumAccount = async (path, updateOverlay) => {
+    const { address } = await generateAddress({
+        publicKey: mpcPublicKey,
+        accountId: contractId,
+        path,
+        chain: 'ethereum',
+    });
+
+    const provider = getSepoliaProvider();
+    const nonce = await provider.getTransactionCount(address);
+    return { nonce };
+};
+
+// signing with ethereum wallet
 
 const domain = {
     name: 'NEAR Trade Signatures',
@@ -85,4 +154,10 @@ export const switchEthereum = async () => {
     const ethersProvider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = ethersProvider.getSigner();
     return { signer, address: await signer.getAddress() };
+};
+
+const getSepoliaProvider = () => {
+    return new ethers.JsonRpcProvider(
+        'https://ethereum-sepolia.publicnode.com',
+    );
 };

@@ -18,7 +18,7 @@ export const wrap = (Component, keys) => {
     if (!keys[0]) keys[0] = GLOBAL_STATE_KEY;
     const { name } = Component;
     let init = true;
-    const wrapped = () => {
+    const wrapped = (props) => {
         const [, update] = useState(false);
         if (init) {
             init = false;
@@ -26,7 +26,11 @@ export const wrap = (Component, keys) => {
         }
         return (
             <Component
-                {...{ state: getState(keys[0]), update: updateState(keys) }}
+                {...{
+                    ...props,
+                    state: getState(keys[0]),
+                    update: updateState(keys),
+                }}
             />
         );
     };

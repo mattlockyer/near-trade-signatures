@@ -2,7 +2,7 @@ import { wrap } from '../state/state';
 import { Overlay } from '../components/Overlay';
 import { sleep } from '../state/utils';
 import { getNearSignature, getNearAccount } from '../utils/near';
-import '../styles/app.scss';
+import { transactions } from '../utils/transactions';
 
 const sampleTX = {
     transactions: [
@@ -39,10 +39,12 @@ const sampleTX = {
     ],
 };
 
-const BitcoinComp = ({ state, update }) => {
+const BitcoinComp = ({ state, update, destination }) => {
     const updateOverlay = (msg) => update(msg, 'overlay');
 
-    const { step, msg, pk, sig, accountId, nearSecpPublicKey } = state;
+    const { step, txString, pk } = state;
+
+    const transaction = transactions[destination];
 
     switch (step) {
         case 'connect':
@@ -78,32 +80,17 @@ const BitcoinComp = ({ state, update }) => {
                             }
                             const { address, publicKey } = res;
 
-                            const {
-                                nonce,
-                                block_hash,
-                                accountId,
-                                nearSecpPublicKey,
-                                nearImplicitSecretKey,
-                            } = await getNearAccount(publicKey, updateOverlay);
+                            const tx = await transaction.getTransaction({
+                                path: publicKey,
+                                updateOverlay,
+                            });
 
-                            // modify the NEAR TX JSON withh the latest TX details, signing account ID and signing public key
-                            const msg = JSON.parse(JSON.stringify(sampleTX));
-                            msg.transactions[0].signer_id = accountId;
-                            msg.transactions[0].receiver_id = accountId;
-                            msg.transactions[0].signer_public_key =
-                                nearSecpPublicKey;
-                            // WARNING nonce must be below Number.MAX_SAFE_INTEGER
-                            msg.transactions[0].nonce = Number(
-                                nonce + BigInt(1),
-                            );
-                            msg.transactions[0].block_hash = block_hash;
+                            console.log(tx);
 
                             update({
-                                msg,
+                                txString: JSON.stringify(tx, undefined, 4),
                                 address,
                                 pk: publicKey,
-                                accountId,
-                                nearSecpPublicKey,
                                 step: 'sign',
                             });
                         }}
@@ -120,7 +107,8 @@ const BitcoinComp = ({ state, update }) => {
                     <textarea
                         rows={16}
                         cols={120}
-                        defaultValue={JSON.stringify(msg, undefined, 4)}
+                        value={txString}
+                        onChange={(e) => update({ txString: e.target.value })}
                     ></textarea>
                     <br />
                     <button
@@ -128,11 +116,12 @@ const BitcoinComp = ({ state, update }) => {
                             updateOverlay({
                                 overlayMessage: 'Please sign TX in OKX Wallet',
                             });
+                            const jsonMsg = JSON.parse(txString);
                             let sig;
                             try {
                                 sig =
                                     await window.okxwallet.bitcoin.signMessage(
-                                        JSON.stringify(msg),
+                                        JSON.stringify(jsonMsg),
                                         'ecdsa',
                                     );
                             } catch (e) {
@@ -150,15 +139,15 @@ const BitcoinComp = ({ state, update }) => {
                                 console.error(e);
                             }
 
-                            await getNearSignature({
+                            transaction.completeTx({
                                 methodName: 'bitcoin_to_near',
                                 args: {
                                     pk,
-                                    msg: JSON.stringify(msg),
+                                    msg: JSON.stringify(jsonMsg),
                                     sig,
                                 },
                                 updateOverlay,
-                                jsonTx: msg.transactions[0],
+                                jsonTx: jsonMsg.transactions[0],
                             });
                         }}
                     >

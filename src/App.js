@@ -1,27 +1,41 @@
 import { wrap } from './state/state';
 import { Bitcoin } from './components/Bitcoin';
 import { Ethereum } from './components/Ethereum';
+import './styles/app.scss';
 
 const AppComp = ({ state, update }) => {
-    const { source } = state;
+    const { source, destination } = state;
 
     switch (source) {
         case 'bitcoin':
-            return <Bitcoin />;
-        case 'ethereum':
-            return <Ethereum />;
+            return <Bitcoin destination={destination} />;
+        case 'evm':
+            return <Ethereum destination={destination} />;
         default:
-            return (
+            return destination ? (
                 <>
-                    <h4>Choose Your Source Wallet</h4>
+                    <h4>Choose Signing Wallet</h4>
                     <br />
                     <button onClick={() => update({ source: 'bitcoin' })}>
                         Bitcoin (OKX Wallet)
                     </button>
                     <br />
                     <br />
-                    <button onClick={() => update({ source: 'ethereum' })}>
-                        Ethereum (MM or OKX Wallet)
+                    <button onClick={() => update({ source: 'evm' })}>
+                        EVM (MM or OKX Wallet)
+                    </button>
+                </>
+            ) : (
+                <>
+                    <h4>Choose the Transaction to Execute</h4>
+                    <br />
+                    <button onClick={() => update({ destination: 'near' })}>
+                        NEAR
+                    </button>
+                    <br />
+                    <br />
+                    <button onClick={() => update({ destination: 'evm' })}>
+                        EVM
                     </button>
                 </>
             );
