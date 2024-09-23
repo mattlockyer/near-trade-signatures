@@ -276,8 +276,6 @@ export const getMpcPublicKey = async () => {
   return res;
 };
 
-getMpcPublicKey();
-
 export const view = async ({ pk, msg, sig }) => {
   const account = new Account(near.connection, accountId);
   const res = await account.viewFunction({

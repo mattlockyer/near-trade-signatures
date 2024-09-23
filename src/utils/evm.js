@@ -1,6 +1,7 @@
 import * as ethers from 'ethers';
 import detectEvmProvider from '@metamask/detect-provider';
 import { generateAddress } from './kdf';
+import { callContract } from './near';
 
 const {
   REACT_APP_contractId: contractId,
@@ -156,4 +157,49 @@ export const switchEvm = async () => {
 
 const getSepoliaProvider = () => {
   return new ethers.JsonRpcProvider('https://evm-sepolia.publicnode.com');
+};
+
+export const completeEvmTx = async ({
+  methodName,
+  args,
+  updateOverlay,
+  jsonTx,
+}) => {
+  // updateOverlay({
+  //   overlayMessage: 'Requesting NEAR Signature',
+  // });
+
+  // const res = await callContract(methodName, args);
+
+  // updateOverlay({
+  //   overlayMessage: 'Received NEAR Signature. Broadcasting NEAR Transaction.',
+  // });
+
+  // const sigRes = JSON.parse(
+  //   Buffer.from(res.status.SuccessValue, 'base64').toString(),
+  // );
+  // console.log('sigRes', sigRes);
+
+  const sigRes = {
+    big_r: {
+      affine_point: '1111111111111111111111111111111111',
+    },
+    s: {
+      scalar: '11111111111111111111111111111111',
+    },
+    recovery_id: 1,
+  };
+
+  const unsignedTx = ethers.Transaction.from(jsonTx);
+  const signature = ethers.Signature.from({
+    r:
+      '0x' +
+      Buffer.from(sigRes.big_r.affine_point.substring(2), 'hex').toString(
+        'hex',
+      ),
+    s: '0x' + Buffer.from(sigRes.s.scalar, 'hex').toString('hex'),
+    v: sigRes.recovery_id,
+  });
+
+  console.log(unsignedTx, signature);
 };

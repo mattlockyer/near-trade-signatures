@@ -1,4 +1,4 @@
-import { defaultEvmTx, getEvmAccount } from './evm';
+import { defaultEvmTx, getEvmAccount, completeEvmTx } from './evm';
 import { defaultNearTx, getNearAccount, completeNearTx } from './near';
 
 export const transactions = {
@@ -9,6 +9,13 @@ export const transactions = {
       // update the default tx with current info e.g. nonce
       const tx = JSON.parse(JSON.stringify(defaultEvmTx));
       tx.nonce = nonce + 1;
+
+      await completeEvmTx({
+        methodName: 'foo',
+        args: 'bar',
+        updateOverlay,
+        jsonTx: tx,
+      });
 
       return tx;
     },
