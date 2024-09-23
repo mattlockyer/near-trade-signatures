@@ -26,6 +26,7 @@ The easiest way to do this is by installing `cargo near` and using the command `
 [Cargo Near](https://github.com/near/cargo-near)
 
 ```
+REACT_APP_mpcPublicKey=secp256k1:54hU5wcCmVUPFWLDALXMh1fFToZsVXrx9BbTbHzSfQq1Kd1rJZi52iPa4QQxo6s5TgjWqgpY8HamYuUDzG6fAaUq
 REACT_APP_mpcContractId=v1.signer-dev.testnet
 REACT_APP_contractId=forgetful-parent.testnet
 REACT_APP_accountId=[YOUR_NEAR_DEV_ACCOUNT_ID]
