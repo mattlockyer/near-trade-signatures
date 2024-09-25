@@ -85,8 +85,6 @@ const BitcoinComp = ({ state, update, destination }) => {
                                 updateOverlay,
                             });
 
-                            console.log(tx);
-
                             update({
                                 txString: JSON.stringify(tx, undefined, 4),
                                 address,
