@@ -42,7 +42,7 @@ const sampleTX = {
 const BitcoinComp = ({ state, update, destination }) => {
     const updateOverlay = (msg) => update(msg, 'overlay');
 
-    const { step, txString, pk } = state;
+    const { step, txString, pk, address, derivedAddress, balance } = state;
 
     const transaction = transactions[destination];
 
@@ -80,14 +80,17 @@ const BitcoinComp = ({ state, update, destination }) => {
                             }
                             const { address, publicKey } = res;
 
-                            const tx = await transaction.getTransaction({
-                                path: publicKey,
-                                updateOverlay,
-                            });
+                            const { derivedAddress, balance, tx } =
+                                await transaction.getTransaction({
+                                    path: publicKey,
+                                    updateOverlay,
+                                });
 
                             update({
                                 txString: JSON.stringify(tx, undefined, 4),
                                 address,
+                                derivedAddress,
+                                balance,
                                 pk: publicKey,
                                 step: 'sign',
                             });
@@ -109,17 +112,20 @@ const BitcoinComp = ({ state, update, destination }) => {
                         onChange={(e) => update({ txString: e.target.value })}
                     ></textarea>
                     <br />
+                    <p>Signing Wallet: {address || pk}</p>
+                    <p>Sending Address: {derivedAddress}</p>
+                    <p>Sending Address Balance: {balance}</p>
                     <button
                         onClick={async () => {
                             updateOverlay({
                                 overlayMessage: 'Please sign TX in OKX Wallet',
                             });
-                            const jsonMsg = JSON.parse(txString);
+                            const json = JSON.parse(txString);
                             let sig;
                             try {
                                 sig =
                                     await window.okxwallet.bitcoin.signMessage(
-                                        JSON.stringify(jsonMsg),
+                                        JSON.stringify(json),
                                         'ecdsa',
                                     );
                             } catch (e) {
@@ -138,14 +144,15 @@ const BitcoinComp = ({ state, update, destination }) => {
                             }
 
                             transaction.completeTx({
-                                methodName: 'bitcoin_to_near',
+                                source: 'bitcoin',
+                                destination,
                                 args: {
                                     pk,
-                                    msg: JSON.stringify(jsonMsg),
+                                    msg: JSON.stringify(json),
                                     sig,
                                 },
                                 updateOverlay,
-                                jsonTx: jsonMsg.transactions[0],
+                                jsonTx: json,
                             });
                         }}
                     >

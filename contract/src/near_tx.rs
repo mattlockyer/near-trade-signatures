@@ -1,13 +1,7 @@
 use crate::*;
-use external::{mpc_contract, SignRequest};
 use near_sdk::borsh::{self};
-use near_sdk::env::sha256;
 use near_sdk::serde_json::{from_str, Value};
-use near_sdk::{env, Gas, NearToken, Promise};
-
-const MPC_CONTRACT_ACCOUNT_ID: &str = "v1.signer-dev.testnet";
-const ONE_YOCTO: NearToken = NearToken::from_yoctonear(1);
-const GAS: Gas = Gas::from_tgas(250);
+use near_sdk::{env, Promise};
 
 use omni_transaction::near::near_transaction::NearTransaction;
 
@@ -23,7 +17,7 @@ pub fn get_transactions(data: &Value) -> Vec<NearTransaction> {
     transactions
 }
 
-pub fn get_near_sig(path: String, msg: String) -> Promise {
+pub fn get_near_sigs(path: String, msg: String) -> Promise {
     let data_value: Value = from_str(&msg).unwrap();
     let transactions = get_transactions(&data_value["transactions"]);
     let mut promise = Promise::new(env::current_account_id());
@@ -32,18 +26,8 @@ pub fn get_near_sig(path: String, msg: String) -> Promise {
     for transaction in transactions {
         let encoded = borsh::to_vec(&transaction).expect("failed to serialize NEAR transaction");
         let payload = sha256(&encoded);
-        // mpc sign call args
-        let request = SignRequest {
-            payload: utils::vec_to_fixed(payload),
-            path: path.to_owned(),
-            key_version: 0,
-        };
         // batch promises with .and
-        let next_promise = mpc_contract::ext(MPC_CONTRACT_ACCOUNT_ID.parse().unwrap())
-            .with_static_gas(GAS)
-            .with_attached_deposit(ONE_YOCTO)
-            .sign(request);
-
+        let next_promise = ecdsa::get_sig(payload, path.to_owned(), 0);
         // combine the promises (executed in parallel)
         promise = promise.then(next_promise);
     }

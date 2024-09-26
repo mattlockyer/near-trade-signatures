@@ -1095,7 +1095,7 @@ dependencies = [
 [[package]]
 name = "omni-transaction"
 version = "0.1.0"
-source = "git+https://github.com/edsonalcala/omni-transaction-rs.git?branch=development#40ba59a0607f76ecc034f1790cc032fc97c3fd14"
+source = "git+https://github.com/edsonalcala/omni-transaction-rs.git?branch=ethereum-legacy-txs#4359fc10abb209575bc05d9f7874ba512dccc121"
 dependencies = [
  "borsh",
  "bs58 0.5.1",
@@ -1104,6 +1104,7 @@ dependencies = [
  "rlp",
  "serde",
  "serde-big-array",
+ "sha2",
 ]
 
 [[package]]
@@ -1333,9 +1334,9 @@ dependencies = [
 
 [[package]]
 name = "rlp"
-version = "0.5.2"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb919243f34364b6bd2fc10ef797edbfa75f33c252e7998527479c6d6b47e1ec"
+checksum = "fa24e92bb2a83198bb76d661a71df9f7076b8c420b8696e4d3d97d50d94479e3"
 dependencies = [
  "bytes",
  "rustc-hex",
