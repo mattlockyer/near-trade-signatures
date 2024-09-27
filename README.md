@@ -29,6 +29,13 @@ The easiest way to do this is by installing `cargo near` and using the command `
 REACT_APP_mpcPublicKey=secp256k1:54hU5wcCmVUPFWLDALXMh1fFToZsVXrx9BbTbHzSfQq1Kd1rJZi52iPa4QQxo6s5TgjWqgpY8HamYuUDzG6fAaUq
 REACT_APP_mpcContractId=v1.signer-dev.testnet
 REACT_APP_contractId=forgetful-parent.testnet
+```
+
+.env vars you need to provide
+
+_Note: NEAR dev account secret key is NOT the seed phrase)_
+
+```
 REACT_APP_accountId=[YOUR_NEAR_DEV_ACCOUNT_ID]
 REACT_APP_secretKey=[YOUR_NEAR_DEV_ACCOUNT_SECRET_KEY]
 ```
@@ -44,8 +51,30 @@ REACT_APP_secretKey=[YOUR_NEAR_DEV_ACCOUNT_SECRET_KEY]
 
 # The NEAR Contract
 
-Please see the Near contract for detailed comments.
+Each contract method is broken down into two parts:
+
+1. Proving that the source chain wallet signed the message
+1. Getting the correct signature for the derived account on the destination chain
+
+Example from a message (msg) signed with a Bitcoin wallet to an EVM ECDSA signature:
+
+```rust
+pub fn bitcoin_to_evm(&mut self, pk: String, msg: String, sig: String) -> Promise {
+	bitcoin_owner::require(&pk, &msg, &sig);
+	evm_tx::get_evm_sig(pk, msg)
+}
+```
+
+First, `bitcoin_owner::require(...)` is called. Second, `evm_tx::get_evm_sig(...)` is called and the signature is returned to the client calling the contract.
+
+### `ecdsa.rs`
+
+This is where the cross contact call to the NEAR Chain Signatures contract is.
+
+### `evm_tx.rs`
+
+This file has the `get_evm_sig(...)` method which takes the JSON msg that was signed and parses it using the Omni library. Once we have an `EVMTransaction` object we can get an RLP encoding of the transaction by calling `build_for_signing()`. Finally, we can get the transaction hash that needs signing by the NEAR Chain Signature MPC Contract call (`ecdsa.rs`) by taking the `keccak256` hash of the RLP encoded EVM transactions.
 
 ### `near_tx.rs`
 
-`get_near_sig` method calls the NEAR MPC contract and returns a Promise for each encoded and hashed NearTransaction. We chain this Promise to the previous Promise and finally return the whole Promise chain.
+Similar to `evm_tx.rs`

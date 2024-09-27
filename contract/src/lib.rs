@@ -7,7 +7,7 @@ use near_sdk::{
 
 mod bitcoin_owner;
 mod ecdsa;
-mod ethereum_owner;
+mod evm_owner;
 mod evm_tx;
 mod external;
 mod near_tx;
@@ -41,13 +41,20 @@ impl Contract {
         */
         near_tx::get_near_sigs(pk, msg)
     }
+
     pub fn ethereum_to_near(&mut self, address: String, msg: String, sig: String) -> Promise {
-        ethereum_owner::require(&address, &msg, &sig);
+        evm_owner::require(&address, &msg, &sig);
         near_tx::get_near_sigs(address, msg)
     }
+
     // to evm
     pub fn bitcoin_to_evm(&mut self, pk: String, msg: String, sig: String) -> Promise {
         bitcoin_owner::require(&pk, &msg, &sig);
         evm_tx::get_evm_sig(pk, msg)
+    }
+
+    pub fn evm_to_evm(&mut self, address: String, msg: String, sig: String) -> Promise {
+        evm_owner::require(&address, &msg, &sig);
+        evm_tx::get_evm_sig(address, msg)
     }
 }
