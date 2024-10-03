@@ -3,10 +3,6 @@ import detectEvmProvider from '@metamask/detect-provider';
 import { generateAddress } from './kdf';
 import { callContract } from './near';
 import { sleep } from '../state/utils';
-let elliptic = require('elliptic');
-let ec = new elliptic.ec('secp256k1');
-
-console.log(ethers);
 
 const {
     REACT_APP_contractId: contractId,

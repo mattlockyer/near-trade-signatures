@@ -1,43 +1,7 @@
 import { wrap } from '../state/state';
 import { Overlay } from '../components/Overlay';
 import { sleep } from '../state/utils';
-import { getNearSignature, getNearAccount } from '../utils/near';
 import { transactions } from '../utils/transactions';
-
-const sampleTX = {
-    transactions: [
-        {
-            signer_id:
-                '86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381',
-            signer_public_key:
-                'ed25519:A4ZsCYMqJ1oHFGR2g2mFrwhQvaWmyz8K5c5FvfxEPF52',
-            nonce: 0,
-            receiver_id:
-                '86a315fdc1c4211787aa2fd78a50041ee581c7fff6cec2535ebec14af5c40381',
-            block_hash: '4reLvkAWfqk5fsqio1KLudk46cqRz9erQdaHkWZKMJDZ',
-            actions: [
-                // transfers 0.1 NEAR
-                { Transfer: { deposit: '100000000000000000000000' } },
-                {
-                    AddKey: {
-                        public_key:
-                            'ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp',
-                        access_key: {
-                            nonce: '0',
-                            permission: 'FullAccess',
-                        },
-                    },
-                },
-                {
-                    DeleteKey: {
-                        public_key:
-                            'ed25519:6E8sCci9badyRkXb3JoRpBj5p8C6Tw41ELDZoiihKEtp',
-                    },
-                },
-            ],
-        },
-    ],
-};
 
 const BitcoinComp = ({ state, update, destination }) => {
     const updateOverlay = (msg) => update(msg, 'overlay');
@@ -85,6 +49,8 @@ const BitcoinComp = ({ state, update, destination }) => {
                                     path: publicKey,
                                     updateOverlay,
                                 });
+
+                            return;
 
                             update({
                                 txString: JSON.stringify(tx, undefined, 4),

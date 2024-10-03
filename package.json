@@ -33,6 +33,7 @@
     },
     "dependencies": {
         "@metamask/detect-provider": "^2.0.0",
+        "bitcoinjs-lib": "^6.1.5",
         "bs58check": "^4.0.0",
         "elliptic": "^6.5.7",
         "ethers": "^6.13.2",

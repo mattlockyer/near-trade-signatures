@@ -285,6 +285,11 @@ export const getMpcPublicKey = async () => {
 
 getMpcPublicKey();
 
+export const getNearBalance = async ({ accountId }) => {
+    const account = new Account(near.connection, accountId);
+    return (await account.getAccountBalance()).available;
+};
+
 export const view = async ({ pk, msg, sig }) => {
     const account = new Account(near.connection, accountId);
     const res = await account.viewFunction({

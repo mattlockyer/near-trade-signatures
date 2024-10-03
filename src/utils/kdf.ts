@@ -70,32 +70,18 @@ export async function uncompressedHexPointToBtcAddress(
 }
 
 export async function generateBtcAddress({
-    publicKey,
-    accountId,
-    path = '',
+    childPublicKey,
     isTestnet = true,
 }: {
-    publicKey: string;
-    accountId: string;
-    path?: string;
+    childPublicKey: string;
     isTestnet?: boolean;
-}): Promise<{ address: string; publicKey: string }> {
-    const childPublicKey = await deriveChildPublicKey(
-        najPublicKeyStrToUncompressedHexPoint(publicKey),
-        accountId,
-        path,
-    );
-
+}): Promise<string> {
     const networkByte = Buffer.from([isTestnet ? 0x6f : 0x00]); // 0x00 for mainnet, 0x6f for testnet
     const address = await uncompressedHexPointToBtcAddress(
         childPublicKey,
         networkByte,
     );
-
-    return {
-        address,
-        publicKey: childPublicKey,
-    };
+    return address;
 }
 
 function uncompressedHexPointToEvmAddress(uncompressedHexPoint) {
@@ -162,16 +148,14 @@ export async function generateAddress({ publicKey, accountId, path, chain }) {
             address = uncompressedHexPointToEvmAddress(childPublicKey);
             break;
         case 'btc':
-            address = await uncompressedHexPointToBtcAddress(
+            address = await generateBtcAddress({
                 childPublicKey,
-                Buffer.from([0x00]),
-            );
+                isTestnet: false,
+            });
             break;
         case 'bitcoin':
             address = await generateBtcAddress({
-                publicKey,
-                accountId,
-                path,
+                childPublicKey,
                 isTestnet: true,
             });
             break;
