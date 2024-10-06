@@ -18,13 +18,13 @@ export const defaultBitcoinTx = {
 };
 
 export const getBitcoinAccount = async (path, updateOverlay) => {
-    const { address } = await generateAddress({
+    const { address, publicKey } = await generateAddress({
         publicKey: mpcPublicKey,
         accountId: contractId,
         path,
         chain: 'bitcoin',
     });
-    return { address };
+    return { address, publicKey };
 };
 
 // bitcoin helpers (generic)

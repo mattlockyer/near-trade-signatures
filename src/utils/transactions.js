@@ -15,9 +15,13 @@ import {
 export const transactions = {
     bitcoin: {
         getTransaction: async ({ path, updateOverlay }) => {
-            const { address } = await getBitcoinAccount(path, updateOverlay);
+            const { address, publicKey } = await getBitcoinAccount(
+                path,
+                updateOverlay,
+            );
 
             console.log(address);
+            console.log(publicKey);
 
             const psbt = await constructPsbt(
                 address,
@@ -25,6 +29,11 @@ export const transactions = {
                 defaultBitcoinTx.value,
             );
             console.log('psbt', psbt);
+
+            console.log(
+                Buffer.from(psbt.data.inputs[0].nonWitnessUtxo).toString('hex'),
+            );
+
             const { tx: unsignedTx } = psbt.data.globalMap.unsignedTx;
             const vin = unsignedTx.ins[0];
             const { outs } = unsignedTx;
@@ -39,7 +48,7 @@ export const transactions = {
                         },
                         script_sig: [],
                         sequence: vin.sequence,
-                        withness: [],
+                        witness: [],
                     },
                 ],
                 output: [
@@ -58,27 +67,19 @@ export const transactions = {
                 ],
             };
 
-            console.log(tx);
+            console.log('transaction json', JSON.stringify(tx));
 
-            // let height = 1000000;
-            // let version = 1;
-            // let mut tx = RustBitcoinTransaction {
-            //     version: RustBitcoinVersion(version),
-            //     lock_time: RustBitcoinLockTime::from_height(height).unwrap(),
-            //     input: vec![RustBitcoinTxIn {
-            //         previous_output: OutPoint {
-            //             txid: Txid::from_raw_hash(Hash::all_zeros()),
-            //             vout: 0,
-            //         },
-            //         script_sig: ScriptBuf::default(),
-            //         sequence: RustBitcoinSequence::default(),
-            //         witness: Witness::default(),
-            //     }],
-            //     output: vec![RustBitcoinTxOut {
-            //         value: Amount::from_sat(10000),
-            //         script_pubkey: ScriptBuf::default(),
-            //     }],
-            // };
+            const keyPair = {
+                publicKey: Buffer.from(publicKey, 'hex'),
+                sign: async (transactionHash) => {
+                    console.log(
+                        'transaction hash',
+                        Buffer.from(transactionHash).toString('hex'),
+                    );
+                },
+            };
+
+            await psbt.signInputAsync(0, keyPair);
         },
     },
     evm: {

@@ -6,6 +6,7 @@ use near_sdk::{
 };
 
 mod bitcoin_owner;
+mod bitcoin_tx;
 mod ecdsa;
 mod evm_owner;
 mod evm_tx;

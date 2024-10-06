@@ -1095,7 +1095,7 @@ dependencies = [
 [[package]]
 name = "omni-transaction"
 version = "0.1.0"
-source = "git+https://github.com/edsonalcala/omni-transaction-rs.git?branch=ethereum-legacy-txs#4359fc10abb209575bc05d9f7874ba512dccc121"
+source = "git+https://github.com/edsonalcala/omni-transaction-rs.git?branch=feat/bitcoin-from-json-support#e48519e2e3601c713e46a4ee8c35920248819029"
 dependencies = [
  "borsh",
  "bs58 0.5.1",
@@ -1104,6 +1104,7 @@ dependencies = [
  "rlp",
  "serde",
  "serde-big-array",
+ "serde_json",
  "sha2",
 ]
 
