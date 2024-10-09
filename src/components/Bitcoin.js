@@ -50,8 +50,6 @@ const BitcoinComp = ({ state, update, destination }) => {
                                     updateOverlay,
                                 });
 
-                            return;
-
                             update({
                                 txString: JSON.stringify(tx, undefined, 4),
                                 address,
@@ -110,12 +108,12 @@ const BitcoinComp = ({ state, update, destination }) => {
                             }
 
                             transaction.completeTx({
-                                source: 'bitcoin',
-                                destination,
                                 args: {
-                                    pk,
+                                    owner: pk,
                                     msg: JSON.stringify(json),
                                     sig,
+                                    source: 'bitcoin',
+                                    destination,
                                 },
                                 updateOverlay,
                                 jsonTx: json,

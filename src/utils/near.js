@@ -6,6 +6,7 @@ let elliptic = require('elliptic');
 let ec = new elliptic.ec('secp256k1');
 import { generateAddress } from '../utils/kdf';
 import { sleep } from '../state/utils';
+import { tradeSignature } from './contract';
 
 export const defaultNearTx = {
     transactions: [
@@ -65,8 +66,28 @@ const config = {
 const near = new Near(config);
 const { provider } = near.connection;
 
+export const getDefaultNearAccount = () =>
+    new Account(near.connection, accountId);
+
 // these methods simplify the frontend logic for Bitcoin.js and Evm.js components
 
+export const getNearTx = async ({ path, updateOverlay }) => {
+    const { nonce, block_hash, accountId, nearSecpPublicKey } =
+        await getNearAccount(path, updateOverlay);
+
+    const balance = await getNearBalance({ accountId });
+
+    // update the default tx with current info e.g. nonce and keys
+    const tx = JSON.parse(JSON.stringify(defaultNearTx));
+    tx.transactions[0].signer_id = accountId;
+    tx.transactions[0].receiver_id = accountId;
+    tx.transactions[0].signer_public_key = nearSecpPublicKey;
+    // WARNING nonce must be below Number.MAX_SAFE_INTEGER
+    tx.transactions[0].nonce = Number(nonce + BigInt(1));
+    tx.transactions[0].block_hash = block_hash;
+
+    return { derivedAddress: accountId, balance, tx };
+};
 // get or create the derived NEAR chain signatures account
 export const getNearAccount = async (path, updateOverlay) => {
     const {
@@ -126,17 +147,12 @@ export const getNearAccount = async (path, updateOverlay) => {
     };
 };
 
-export const completeNearTx = async ({
-    methodName,
-    args,
-    updateOverlay,
-    jsonTx,
-}) => {
+export const completeNearTx = async ({ args, updateOverlay, jsonTx }) => {
     updateOverlay({
         overlayMessage: 'Requesting NEAR Signature',
     });
 
-    const res = await callContract(methodName, args);
+    const res = await tradeSignature(args);
 
     updateOverlay({
         overlayMessage:

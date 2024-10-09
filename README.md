@@ -54,18 +54,28 @@ REACT_APP_secretKey=[YOUR_NEAR_DEV_ACCOUNT_SECRET_KEY]
 Each contract method is broken down into two parts:
 
 1. Proving that the source chain wallet signed the message
-1. Getting the correct signature for the derived account on the destination chain
+1. Getting a signature for the derived account on the destination chain
 
-Example from a message (msg) signed with a Bitcoin wallet to an EVM ECDSA signature:
+Taking a look at the method signature for trade_signature, the contract's public method:
 
 ```rust
-pub fn bitcoin_to_evm(&mut self, pk: String, msg: String, sig: String) -> Promise {
-	bitcoin_owner::require(&pk, &msg, &sig);
-	evm_tx::get_evm_sig(pk, msg)
-}
+pub fn trade_signature(
+	&mut self,
+	// public key (bitcoin) or address (evm)
+	owner: String,
+	msg: String,
+	sig: String,
+	source: String,
+	destination: String,
+	hash: Option<String>,
+) -> PromiseOrValue<u8> {
 ```
 
-First, `bitcoin_owner::require(...)` is called. Second, `evm_tx::get_evm_sig(...)` is called and the signature is returned to the client calling the contract.
+Given arguments for source `bitcoin` and destination `evm`:
+
+First, `bitcoin_owner::require(owner, msg, sig)` is called. This method will verify that the `owner` (a bitcoin public key) can be recovered from the `msg` signed by the provided `signature`.
+
+Second, `evm_tx::get_evm_sig(owner, msg)` is called. The `msg` is parsed and encoded into an evm transaction. A cross contract call is made to the NEAR Chain Signatures contract with the path variable of `owner` creating a signature for a unique derived account. The cross contract call returns the promise to the contract and on to the client.
 
 ### `ecdsa.rs`
 

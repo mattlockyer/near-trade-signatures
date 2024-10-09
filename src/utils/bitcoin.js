@@ -1,5 +1,6 @@
 import { fetchJson } from './utils';
 import { generateAddress } from './kdf';
+import { tradeSignature } from './contract';
 import * as bitcoinJs from 'bitcoinjs-lib';
 import secp256k1 from 'secp256k1';
 
@@ -11,6 +12,8 @@ const {
 } = process.env;
 
 // specific to UI
+
+let hashToSign;
 
 export const defaultBitcoinTx = {
     to: 'msVQwrAD9VgMwwAUrT29ACX2CrUBfW9G5g',
@@ -27,6 +30,85 @@ export const getBitcoinAccount = async (path, updateOverlay) => {
     return { address, publicKey };
 };
 
+export const getBitcoinTx = async ({ path, updateOverlay }) => {
+    const { address, publicKey } = await getBitcoinAccount(path, updateOverlay);
+
+    const { psbt, balance } = await constructPsbt(
+        address,
+        address,
+        defaultBitcoinTx.value,
+    );
+    console.log('balance', balance);
+    console.log('psbt', psbt);
+    // console.log(
+    //     Buffer.from(psbt.data.inputs[0].nonWitnessUtxo).toString('hex'),
+    // );
+
+    const { tx: unsignedTx } = psbt.data.globalMap.unsignedTx;
+    const vin = unsignedTx.ins[0];
+    const { outs } = unsignedTx;
+    const tx = {
+        version: 2,
+        lock_time: 0,
+        input: [
+            {
+                previous_output: {
+                    txid: Buffer.from(vin.hash).toString('hex'),
+                    vout: 0,
+                },
+                script_sig: [],
+                sequence: vin.sequence,
+                witness: [],
+            },
+        ],
+        output: [
+            {
+                value: outs[0].value,
+                script_pubkey: Buffer.from(outs[0].script).toString('hex'),
+            },
+            {
+                value: outs[1].value,
+                script_pubkey: Buffer.from(outs[1].script).toString('hex'),
+            },
+        ],
+    };
+
+    console.log('transaction json', JSON.stringify(tx));
+
+    // stash the hash to sign, temporary solution until omni encodes psbt
+    const keyPair = {
+        publicKey: Buffer.from(publicKey, 'hex'),
+        sign: async (transactionHash) => {
+            hashToSign = Buffer.from(transactionHash).toString('hex');
+            console.log(
+                'transaction hash',
+                Buffer.from(transactionHash).toString('hex'),
+            );
+            return Buffer.from(
+                '0000000000000000000000000000000000000000000000000000000000000000',
+            );
+        },
+    };
+    await psbt.signInputAsync(0, keyPair);
+
+    return { derivedAddress: address, balance, tx };
+};
+
+export const completeBitcoinTx = async ({ args, updateOverlay, jsonTx }) => {
+    // special case for bitcoin, pass the hash directly through contract to MPC
+    const res = await tradeSignature({
+        ...args,
+        hash: hashToSign,
+    });
+
+    console.log('MPC contract result', res);
+
+    try {
+    } catch (e) {
+        console.log(e);
+    }
+};
+
 // bitcoin helpers (generic)
 
 export const constructPsbt = async (address, to, amount) => {
@@ -37,7 +119,7 @@ export const constructPsbt = async (address, to, amount) => {
 
     if (!address) return console.log('must provide a sending address');
 
-    const { getBalance, explorer } = bitcoin;
+    const { getBalance } = bitcoin;
     const sats = parseInt(amount);
 
     // Get UTXOs
@@ -141,7 +223,7 @@ export const constructPsbt = async (address, to, amount) => {
     }
 
     // Return the constructed PSBT and UTXOs for signing
-    return psbt;
+    return { psbt, balance: utxos[0].value };
 };
 
 export const bitcoin = {

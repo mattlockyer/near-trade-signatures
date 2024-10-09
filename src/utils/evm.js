@@ -1,7 +1,7 @@
 import * as ethers from 'ethers';
 import detectEvmProvider from '@metamask/detect-provider';
 import { generateAddress } from './kdf';
-import { callContract } from './near';
+import { tradeSignature } from './contract';
 import { sleep } from '../state/utils';
 
 const {
@@ -31,6 +31,21 @@ export const getMaxFeePerGas = async () => {
 };
 
 // chain signatures account
+
+export const getEvmTx = async ({ path, updateOverlay }) => {
+    const { address, balance, nonce } = await getEvmAccount(
+        path,
+        updateOverlay,
+    );
+
+    // update the default tx with current info e.g. nonce
+    const tx = JSON.parse(JSON.stringify(defaultEvmTx));
+
+    tx.nonce = nonce.toString();
+    tx.maxFeePerGas = await getMaxFeePerGas();
+
+    return { derivedAddress: address, balance, tx };
+};
 
 export const getEvmAccount = async (path, updateOverlay) => {
     const { address } = await generateAddress({
@@ -78,8 +93,8 @@ export const getEvm = async () => {
     }
 
     try {
-        await window.evm.request({
-            method: 'wallet_switchEvmChain',
+        await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
             params: [{ chainId: '0x' + domain.chainId.toString(16) }],
         });
     } catch (e) {
@@ -89,8 +104,8 @@ export const getEvm = async () => {
         }
 
         try {
-            await window.evm.request({
-                method: 'wallet_addEvmChain',
+            await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
                 params: [
                     {
                         chainId: '0x' + domain.chainId.toString(16),
@@ -115,7 +130,7 @@ export const getEvm = async () => {
         }
     }
 
-    const ethersProvider = new ethers.BrowserProvider(window.evm);
+    const ethersProvider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await ethersProvider.listAccounts();
     if (accounts.length === 0) {
         await ethersProvider.send('eth_requestAccounts', []);
@@ -139,17 +154,12 @@ const getSepoliaProvider = () => {
     );
 };
 
-export const completeEvmTx = async ({
-    methodName,
-    args,
-    updateOverlay,
-    jsonTx,
-}) => {
+export const completeEvmTx = async ({ args, updateOverlay, jsonTx }) => {
     updateOverlay({
         overlayMessage: 'Requesting NEAR Signature',
     });
 
-    const res = await callContract(methodName, args);
+    const res = await tradeSignature(args);
 
     updateOverlay({
         overlayMessage:
