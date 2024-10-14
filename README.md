@@ -26,8 +26,8 @@ The easiest way to do this is by installing `cargo near` and using the command `
 [Cargo Near](https://github.com/near/cargo-near)
 
 ```
-REACT_APP_mpcPublicKey=secp256k1:54hU5wcCmVUPFWLDALXMh1fFToZsVXrx9BbTbHzSfQq1Kd1rJZi52iPa4QQxo6s5TgjWqgpY8HamYuUDzG6fAaUq
-REACT_APP_mpcContractId=v1.signer-dev.testnet
+REACT_APP_mpcPublicKey=secp256k1:4NfTiv3UsGahebgTaHyD9vF8KYKMBnfd6kh94mK6xv8fGBiJB8TBtFMP5WWXz6B89Ac1fbpzPwAvoyQebemHFwx3
+REACT_APP_mpcContractId=v1.signer-prod.testnet
 REACT_APP_contractId=forgetful-parent.testnet
 ```
 
@@ -38,6 +38,16 @@ _Note: NEAR dev account secret key is NOT the seed phrase)_
 ```
 REACT_APP_accountId=[YOUR_NEAR_DEV_ACCOUNT_ID]
 REACT_APP_secretKey=[YOUR_NEAR_DEV_ACCOUNT_SECRET_KEY]
+```
+
+### REACT_APP_mpcContractId & REACT_APP_mpcPublicKey
+
+The MPC contract for testnet may change from time to time. If you are having difficulties with the contract e.g. timeouts, signatures not being returned / ready, or any other issues with the contract address, reach out in the following Telegram group: https://t.me/chain_abstraction
+
+The MPC public key corresponds to the MPC contract, but also may change from time to time as nodes are added and removed from the MPC network or the network is rebooted. Please verify the latest MPC public key for the contract you are using by using `near-cli` and the following command:
+
+```
+near view v1.signer-prod.testnet public_key
 ```
 
 # Run the App
