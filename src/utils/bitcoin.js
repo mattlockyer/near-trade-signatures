@@ -4,7 +4,7 @@ import { tradeSignature } from './contract';
 import * as bitcoinJs from 'bitcoinjs-lib';
 import secp256k1 from 'secp256k1';
 
-// faucet: https://coinfaucet.eu/en/btc-testnet/
+// faucet: https://coinfaucet.eu/en/btc-testnet/ ; https://www.thefaucet.org/
 
 const {
     REACT_APP_contractId: contractId,
@@ -17,7 +17,7 @@ let hashToSign, signerAddress, signerPublicKey;
 
 export const defaultBitcoinTx = {
     to: 'msVQwrAD9VgMwwAUrT29ACX2CrUBfW9G5g',
-    value: '1',
+    value: '546',
 };
 
 export const getBitcoinAccount = async (path, updateOverlay) => {
@@ -32,6 +32,8 @@ export const getBitcoinAccount = async (path, updateOverlay) => {
 
 export const getBitcoinTx = async ({ path, updateOverlay }) => {
     const { address, publicKey } = await getBitcoinAccount(path, updateOverlay);
+
+    console.log('btc address', address);
 
     signerPublicKey = publicKey;
     signerAddress = address;
@@ -51,6 +53,7 @@ export const getBitcoinTx = async ({ path, updateOverlay }) => {
     const { tx: unsignedTx } = psbt.data.globalMap.unsignedTx;
     const vin = unsignedTx.ins[0];
     const { outs } = unsignedTx;
+
     const txForOmni = {
         version: 2,
         lock_time: 0,
@@ -65,16 +68,10 @@ export const getBitcoinTx = async ({ path, updateOverlay }) => {
                 witness: [],
             },
         ],
-        output: [
-            {
-                value: outs[0].value,
-                script_pubkey: Buffer.from(outs[0].script).toString('hex'),
-            },
-            {
-                value: outs[1].value,
-                script_pubkey: Buffer.from(outs[1].script).toString('hex'),
-            },
-        ],
+        output: outs.map((out) => ({
+            value: out.value,
+            script_pubkey: Buffer.from(out.script).toString('hex'),
+        })),
     };
 
     console.log('transaction json for omni library', JSON.stringify(txForOmni));
@@ -161,10 +158,26 @@ export const completeBitcoinTx = async ({ args, updateOverlay, jsonTx }) => {
 
     if (hash === 'failed') return;
 
-    console.log('explorer link:', explorer + hash);
+    console.log('explorer link:', `${explorer}/tx/${hash}`);
     updateOverlay({
-        overlayMessage:
-            'TX broadcast successfully. Check console for explorer link.',
+        overlayMessage: (
+            <>
+                <a href={`${explorer}/tx/${hash}`} target="_blank">
+                    Explorer Link
+                </a>
+                <br />
+                <br />
+                <button
+                    onClick={() =>
+                        updateOverlay({
+                            overlayMessage: '',
+                        })
+                    }
+                >
+                    Close
+                </button>
+            </>
+        ),
     });
     console.log('completed');
 };
