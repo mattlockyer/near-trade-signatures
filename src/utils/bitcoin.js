@@ -4,6 +4,8 @@ import { tradeSignature } from './contract';
 import * as bitcoinJs from 'bitcoinjs-lib';
 import secp256k1 from 'secp256k1';
 
+console.log(bitcoinJs);
+
 // faucet: https://coinfaucet.eu/en/btc-testnet/ ; https://www.thefaucet.org/
 
 const {
