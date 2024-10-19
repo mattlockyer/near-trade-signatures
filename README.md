@@ -2,16 +2,18 @@
 
 [Chain Signatures Official Documentation](https://docs.near.org/build/chain-abstraction/chain-signatures)
 
-# Overview
+# Overview of "Trade Signatures"
 
-1. Use a Bitcoin Wallet (OKX Wallet) or an EVM Wallet (MM, OKX) to sign an unsigned transaction (UTX) of another chain (Bitcoin, EVM or NEAR).
-1. The public key (or EVM address) is used as a NEAR Chain Signatures `path` offset to create a derived ECDSA public key and account (DA).
-1. The DA is automatically created, funded and the necessary ECDSA signing key (secp256k1) is added to the account
-1. The signature and UTX are sent to the NEAR contract (NC).
-1. The NC verifies the signature and matches a recoved public key to the client provided public key (or EVM address).
+Using a **Bitcoin Wallet** (OKX Wallet) or **EVM Wallet** (MM, OKX), sign an unsigned transaction (UTX) for **Bitcoin, EVM or NEAR**, call a NEAR contract (NC) and trade one signature for another.
+
+1. The derived account (DA) is created from the signing wallet's public key (or EVM address) and used as the NEAR Chain Signatures `path` offset.
+1. If the DA is NEAR, the DA is automatically created, funded and the necessary ECDSA signing key (secp256k1:...) is added to the account
+1. **If the DA is EVM or Bitcoin, YOU WILL NEED TO FUND THESE ACCOUNTS.**
+1. The signature and unsigned transaction (UTX) are sent to the NEAR contract (NC).
+1. The NC verifies the signature and matches the recovery bytes to the client provided public key (or EVM address).
 1. The NC makes a cross contract call to the NEAR Chain Signatures contract to sign the hash of the UTX for the DA.
 1. The ECDSA signature is returned to the client.
-1. The UTX can now be broadcast to the chain with the ECDSA signature.
+1. The UTX can now be broadcast to the destination chain with the ECDSA signature.
 
 # EVM Wallet to Bitcoin TX
 
