@@ -88,7 +88,7 @@ near view v1.signer-prod.testnet public_key
 
 # The NEAR Contract
 
-Each contract method is broken down into two parts:
+The NEAR contract method `trade_signature` is broken down into 2 parts.
 
 1. Proving that the source chain wallet signed the message
 1. Getting a signature for the derived account on the destination chain
@@ -108,7 +108,9 @@ pub fn trade_signature(
 ) -> PromiseOrValue<u8> {
 ```
 
-Given arguments for source `bitcoin` and destination `evm`:
+## Example
+
+Given arguments for source `bitcoin` and destination `evm`.
 
 First, `bitcoin_owner::require(owner, msg, sig)` is called. This method will verify that the `owner` (a bitcoin public key) can be recovered from the `msg` signed by the provided `signature`.
 
@@ -125,3 +127,7 @@ This file has the `get_evm_sig(...)` method which takes the JSON msg that was si
 ### `near_tx.rs`
 
 Similar to `evm_tx.rs`
+
+### `bitcoin_tx.rs`
+
+For Bitcoin currently we simply pass through the hash of the input to sign. Using `bitcoinjs-lib` and creating Psbt's, the input hash will change if you change the output. So while this isn't technically a risk to the client, the preferred method would be to encode and hash the unsigned transaction that the client signed with the signing wallet.
